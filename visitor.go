@@ -40,25 +40,21 @@ type ObjectVisitor interface {
 	OnObjectStart(len int, baseType BaseType) error
 	OnObjectFinished() error
 	OnKey(s string) error
-	OnFieldNext() error
 }
 
 // ArrayVisitor iterates all entries in a list/array like structure
 type ArrayVisitor interface {
 	OnArrayStart(len int, baseType BaseType) error
 	OnArrayFinished() error
-	OnElemNext() error
 }
 
 // ValueVisitor reports actual values in a structure being iterated
 type ValueVisitor interface {
-	OnString(s string) error
+	OnNil() error
 
 	OnBool(b bool) error
 
-	OnNil() error
-
-	OnByte(b byte) error
+	OnString(s string) error
 
 	// int
 	OnInt8(i int8) error
@@ -68,6 +64,7 @@ type ValueVisitor interface {
 	OnInt(i int) error
 
 	// uint
+	OnByte(b byte) error
 	OnUint8(u uint8) error
 	OnUint16(u uint16) error
 	OnUint32(u uint32) error
@@ -82,8 +79,9 @@ type ValueVisitor interface {
 // ArrayValueVisitor passes arrays with known type. Implementation
 // of ArrayValueVisitor is optional.
 type ArrayValueVisitor interface {
-	OnStringArray([]string) error
 	OnBoolArray([]bool) error
+
+	OnStringArray([]string) error
 
 	// int
 	OnInt8Array([]int8) error
@@ -108,8 +106,9 @@ type ArrayValueVisitor interface {
 // ObjectValueVisitor passes map[string]T. Implementation
 // of ObjectValueVisitor is optional.
 type ObjectValueVisitor interface {
-	OnStringObject(map[string]string) error
 	OnBoolObject(map[string]bool) error
+
+	OnStringObject(map[string]string) error
 
 	// int
 	OnInt8Object(map[string]int8) error

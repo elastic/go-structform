@@ -1,5 +1,7 @@
 package ubjson
 
+import "github.com/urso/go-structform/internal/unsafe"
+
 const (
 	noMarker byte = 0
 
@@ -27,3 +29,11 @@ const (
 	countMarker byte = '#'
 	typeMarker  byte = '$'
 )
+
+func str2Bytes(s string) []byte {
+	return unsafe.Str2Bytes(s)
+}
+
+func bytes2Str(b []byte) string {
+	return unsafe.Bytes2Str(b)
+}

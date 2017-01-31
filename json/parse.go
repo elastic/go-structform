@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"reflect"
 	"strconv"
+	"unicode"
+	"unsafe"
 
 	structform "github.com/urso/go-structform"
 )
 
-type parser struct {
+type Parser struct {
 	visitor structform.Visitor
 
 	// last fail state
@@ -49,14 +52,6 @@ var (
 	errExpectedArrayField  = errors.New("expected ']' or ','")
 )
 
-var (
-	nullSymbol  = []byte("null")
-	trueSymbol  = []byte("true")
-	falseSymbol = []byte("false")
-)
-
-var whitespace = " \t\r\n"
-
 type state uint8
 
 const (
@@ -82,7 +77,7 @@ const (
 )
 
 func ParseReader(in io.Reader, vs structform.Visitor) (int64, error) {
-	p := newParser(vs)
+	p := NewParser(vs)
 	i, err := io.Copy(p, in)
 	if err == nil {
 		err = p.finalize()
@@ -91,20 +86,15 @@ func ParseReader(in io.Reader, vs structform.Visitor) (int64, error) {
 }
 
 func Parse(b []byte, vs structform.Visitor) error {
-	p := newParser(vs)
-	p.err = p.feed(b)
-	if p.err == nil {
-		p.err = p.finalize()
-	}
-	return p.err
+	return NewParser(vs).Parse(b)
 }
 
 func ParseString(str string, vs structform.Visitor) error {
-	return Parse([]byte(str), vs)
+	return NewParser(vs).ParseString(str)
 }
 
-func newParser(vs structform.Visitor) *parser {
-	p := &parser{
+func NewParser(vs structform.Visitor) *Parser {
+	p := &Parser{
 		visitor:      vs,
 		currentState: startState,
 	}
@@ -113,7 +103,22 @@ func newParser(vs structform.Visitor) *parser {
 	return p
 }
 
-func (p *parser) Write(b []byte) (int, error) {
+func (p *Parser) Parse(b []byte) error {
+	p.err = p.feed(b)
+	if p.err == nil {
+		p.err = p.finalize()
+	}
+	return p.err
+}
+
+func (p *Parser) ParseString(str string) error {
+	sh := *((*reflect.StringHeader)(unsafe.Pointer(&str)))
+	bh := reflect.SliceHeader{Data: sh.Data, Len: sh.Len, Cap: sh.Len}
+	b := *(*[]byte)(unsafe.Pointer(&bh))
+	return p.Parse(b)
+}
+
+func (p *Parser) Write(b []byte) (int, error) {
 	p.err = p.feed(b)
 	if p.err != nil {
 		return 0, p.err
@@ -121,7 +126,7 @@ func (p *parser) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-func (p *parser) feed(b []byte) error {
+func (p *Parser) feed(b []byte) error {
 	for len(b) > 0 {
 		var err error
 
@@ -141,7 +146,7 @@ func (p *parser) feed(b []byte) error {
 			b, err = p.stepDictKey(b)
 
 		case dictFieldValueSep:
-			if b = bytes.TrimLeft(b, whitespace); len(b) > 0 {
+			if b = trimLeft(b); len(b) > 0 {
 				if b[0] != ':' {
 					err = errExpectColon
 				}
@@ -191,7 +196,7 @@ func (p *parser) feed(b []byte) error {
 	return nil
 }
 
-func (p *parser) finalize() error {
+func (p *Parser) finalize() error {
 	if p.currentState == numberState {
 		err := p.reportNumber(p.literalBuffer, p.isDouble)
 		if err != nil {
@@ -207,14 +212,14 @@ func (p *parser) finalize() error {
 	return nil
 }
 
-func (p *parser) pushState(next state) {
+func (p *Parser) pushState(next state) {
 	if p.currentState != failedState {
 		p.states = append(p.states, p.currentState)
 	}
 	p.currentState = next
 }
 
-func (p *parser) popState() {
+func (p *Parser) popState() {
 	if len(p.states) == 0 {
 		p.currentState = failedState
 	} else {
@@ -224,12 +229,12 @@ func (p *parser) popState() {
 	}
 }
 
-func (p *parser) stepStart(b []byte) ([]byte, error) {
+func (p *Parser) stepStart(b []byte) ([]byte, error) {
 	return p.stepValue(b, p.currentState)
 }
 
-func (p *parser) stepValue(b []byte, retState state) ([]byte, error) {
-	b = bytes.TrimLeft(b, whitespace)
+func (p *Parser) stepValue(b []byte, retState state) ([]byte, error) {
+	b = trimLeft(b)
 	if len(b) == 0 {
 		return b, nil
 	}
@@ -280,8 +285,8 @@ func (p *parser) stepValue(b []byte, retState state) ([]byte, error) {
 	}
 }
 
-func (p *parser) stepDict(b []byte, allowEnd bool) ([]byte, error) {
-	b = bytes.TrimLeft(b, whitespace)
+func (p *Parser) stepDict(b []byte, allowEnd bool) ([]byte, error) {
+	b = trimLeft(b)
 	if len(b) == 0 {
 		return b, nil
 	}
@@ -303,7 +308,7 @@ func (p *parser) stepDict(b []byte, allowEnd bool) ([]byte, error) {
 	}
 }
 
-func (p *parser) stepDictKey(b []byte) ([]byte, error) {
+func (p *Parser) stepDictKey(b []byte) ([]byte, error) {
 	str, done, b, err := p.doString(b)
 	if done && err == nil {
 		p.currentState = dictFieldValueSep
@@ -312,8 +317,8 @@ func (p *parser) stepDictKey(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) stepDictValueEnd(b []byte) ([]byte, error) {
-	b = bytes.TrimLeft(b, whitespace)
+func (p *Parser) stepDictValueEnd(b []byte) ([]byte, error) {
+	b = trimLeft(b)
 	if len(b) == 0 {
 		return b, nil
 	}
@@ -324,19 +329,19 @@ func (p *parser) stepDictValueEnd(b []byte) ([]byte, error) {
 		return p.endDict(b)
 	case ',':
 		p.currentState = dictNextFieldState
-		return b[1:], p.visitor.OnFieldNext()
+		return b[1:], nil
 	default:
 		return nil, errUnknownChar
 	}
 }
 
-func (p *parser) endDict(b []byte) ([]byte, error) {
+func (p *Parser) endDict(b []byte) ([]byte, error) {
 	p.popState()
 	return b[1:], p.visitor.OnObjectFinished()
 }
 
-func (p *parser) stepArray(b []byte, allowEnd bool) ([]byte, error) {
-	b = bytes.TrimLeft(b, whitespace)
+func (p *Parser) stepArray(b []byte, allowEnd bool) ([]byte, error) {
+	b = trimLeft(b)
 	if len(b) == 0 {
 		return b, nil
 	}
@@ -354,8 +359,8 @@ func (p *parser) stepArray(b []byte, allowEnd bool) ([]byte, error) {
 	return b, nil
 }
 
-func (p *parser) stepArrValueEnd(b []byte) ([]byte, error) {
-	b = bytes.TrimLeft(b, whitespace)
+func (p *Parser) stepArrValueEnd(b []byte) ([]byte, error) {
+	b = trimLeft(b)
 	if len(b) == 0 {
 		return b, nil
 	}
@@ -366,18 +371,18 @@ func (p *parser) stepArrValueEnd(b []byte) ([]byte, error) {
 		return p.endArray(b)
 	case ',':
 		p.currentState = arrStateValue
-		return b[1:], p.visitor.OnElemNext()
+		return b[1:], nil
 	default:
 		return nil, errUnknownChar
 	}
 }
 
-func (p *parser) endArray(b []byte) ([]byte, error) {
+func (p *Parser) endArray(b []byte) ([]byte, error) {
 	p.popState()
 	return b[1:], p.visitor.OnArrayFinished()
 }
 
-func (p *parser) stepString(b []byte) ([]byte, error) {
+func (p *Parser) stepString(b []byte) ([]byte, error) {
 	str, done, b, err := p.doString(b)
 	if done && err == nil {
 		p.popState()
@@ -386,7 +391,7 @@ func (p *parser) stepString(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) doString(b []byte) (string, bool, []byte, error) {
+func (p *Parser) doString(b []byte) (string, bool, []byte, error) {
 	stop := -1
 	done := false
 
@@ -426,13 +431,14 @@ func (p *parser) doString(b []byte) (string, bool, []byte, error) {
 		p.literalBuffer = b[:0] // reset buffer
 	}
 
-	// use encoding/json to unescape and parse into go string
+	// XXX: use encoding/json to unescape and parse into go string
+	//      see if we can replace with processing the string into p.literalBuffer
 	var str string
 	err := json.Unmarshal(b, &str)
 	return str, done, rest, err
 }
 
-func (p *parser) stepNumber(b []byte) ([]byte, error) {
+func (p *Parser) stepNumber(b []byte) ([]byte, error) {
 	// search for char in stop-set
 	stop := -1
 	done := false
@@ -467,17 +473,17 @@ func (p *parser) stepNumber(b []byte) ([]byte, error) {
 	return rest, err
 }
 
-func (p *parser) reportNumber(b []byte, isDouble bool) error {
+func (p *Parser) reportNumber(b []byte, isDouble bool) error {
 	// parse number
 	var err error
 	if isDouble {
 		var f float64
-		if f, err = strconv.ParseFloat(string(b), 64); err == nil {
+		if f, err = strconv.ParseFloat(bytes2Str(b), 64); err == nil {
 			err = p.visitor.OnFloat64(f)
 		}
 	} else {
 		var i int64
-		if i, err = strconv.ParseInt(string(b), 10, 64); err == nil {
+		if i, err = strconv.ParseInt(bytes2Str(b), 10, 64); err == nil {
 			err = p.visitor.OnInt64(i)
 		}
 	}
@@ -485,7 +491,7 @@ func (p *parser) reportNumber(b []byte, isDouble bool) error {
 	return err
 }
 
-func (p *parser) stepNULL(b []byte) ([]byte, error) {
+func (p *Parser) stepNULL(b []byte) ([]byte, error) {
 	b, done, err := p.stepKind(b, []byte("null"), errExpectedNull)
 	if done {
 		err = p.visitor.OnNil()
@@ -493,7 +499,7 @@ func (p *parser) stepNULL(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) stepTRUE(b []byte) ([]byte, error) {
+func (p *Parser) stepTRUE(b []byte) ([]byte, error) {
 	b, done, err := p.stepKind(b, []byte("true"), errExpectedTrue)
 	if done {
 		err = p.visitor.OnBool(true)
@@ -501,7 +507,7 @@ func (p *parser) stepTRUE(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) stepFALSE(b []byte) ([]byte, error) {
+func (p *Parser) stepFALSE(b []byte) ([]byte, error) {
 	b, done, err := p.stepKind(b, []byte("false"), errExpectedFalse)
 	if done {
 		err = p.visitor.OnBool(false)
@@ -509,7 +515,7 @@ func (p *parser) stepFALSE(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) stepKind(b []byte, kind []byte, err error) ([]byte, bool, error) {
+func (p *Parser) stepKind(b []byte, kind []byte, err error) ([]byte, bool, error) {
 	n := p.required
 	s := kind[len(kind)-n:]
 	done := true
@@ -533,3 +539,14 @@ func (p *parser) stepKind(b []byte, kind []byte, err error) ([]byte, bool, error
 func isDigit(c byte) bool {
 	return '0' <= c && c <= '9'
 }
+
+func trimLeft(b []byte) []byte {
+	for i, c := range b {
+		if !unicode.IsSpace(rune(c)) {
+			return b[i:]
+		}
+	}
+	return nil
+}
+
+var whitespace = " \t\r\n"

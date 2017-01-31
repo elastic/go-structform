@@ -16,6 +16,15 @@ type Visitor struct {
 	w writer
 
 	scratch [64]byte
+
+	first   boolStack
+	inArray boolStack
+}
+
+type boolStack struct {
+	stack   []bool
+	stack0  [32]bool
+	current bool
 }
 
 var _ structform.Visitor = &Visitor{}
@@ -29,54 +38,92 @@ func (w writer) write(b []byte) error {
 	return err
 }
 
-func (w writer) writeByte(b byte) error {
-	return w.write([]byte{b})
-}
-
-func (w writer) writeString(s string) error {
-	return w.write([]byte(s))
-}
-
 func NewVisitor(out io.Writer) *Visitor {
-	return &Visitor{w: writer{out}}
+	v := &Visitor{w: writer{out}}
+	return v
+}
+
+func (vs *Visitor) writeByte(b byte) error {
+	vs.scratch[0] = b
+	return vs.w.write(vs.scratch[:1])
+}
+
+func (vs *Visitor) writeString(s string) error {
+	return vs.w.write(str2Bytes(s))
 }
 
 func (vs *Visitor) OnObjectStart(_ int, _ structform.BaseType) error {
-	return vs.w.writeByte('{')
+	if err := vs.tryElemNext(); err != nil {
+		return err
+	}
+
+	vs.first.push(true)
+	vs.inArray.push(false)
+	return vs.writeByte('{')
 }
 
 func (vs *Visitor) OnObjectFinished() error {
-	return vs.w.writeByte('}')
+	vs.first.pop()
+	vs.inArray.pop()
+	return vs.writeByte('}')
 }
 
 func (vs *Visitor) OnKey(s string) error {
+	if err := vs.onFieldNext(); err != nil {
+		return err
+	}
+
 	err := vs.OnString(s)
 	if err == nil {
-		err = vs.w.writeByte(':')
+		err = vs.writeByte(':')
 	}
 	return err
 }
 
-func (vs *Visitor) OnFieldNext() error {
-	return vs.w.writeByte(',')
+func (vs *Visitor) onFieldNext() error {
+	if vs.first.current {
+		vs.first.current = false
+		return nil
+	}
+	return vs.writeByte(',')
 }
 
 func (vs *Visitor) OnArrayStart(_ int, _ structform.BaseType) error {
-	return vs.w.writeByte('[')
+	if err := vs.tryElemNext(); err != nil {
+		return err
+	}
+
+	vs.first.push(true)
+	vs.inArray.push(true)
+	return vs.writeByte('[')
 }
 
 func (vs *Visitor) OnArrayFinished() error {
-	return vs.w.writeByte(']')
+	vs.first.pop()
+	vs.inArray.pop()
+	return vs.writeByte(']')
 }
 
-func (vs *Visitor) OnElemNext() error {
-	return vs.w.writeByte(',')
+func (vs *Visitor) tryElemNext() error {
+	if !vs.inArray.current {
+		return nil
+	}
+
+	if vs.first.current {
+		vs.first.current = false
+		return nil
+	}
+	return vs.w.write(commaSymbol)
 }
 
 var hex = "0123456789abcdef"
 
 func (vs *Visitor) OnString(s string) error {
-	vs.w.writeByte('"')
+	if err := vs.tryElemNext(); err != nil {
+		return err
+	}
+
+	vs.writeByte('"')
 	start := 0
 	for i := 0; i < len(s); {
 		if b := s[i]; b < utf8.RuneSelf {
@@ -85,29 +132,30 @@ func (vs *Visitor) OnString(s string) error {
 				continue
 			}
 			if start < i {
-				vs.w.writeString(s[start:i])
+				vs.writeString(s[start:i])
 			}
 			switch b {
 			case '\\', '"':
-				vs.w.writeByte('\\')
-				vs.w.writeByte(b)
+				vs.scratch[0], vs.scratch[1] = '\\', b
+				vs.w.write(vs.scratch[:2])
 			case '\n':
-				vs.w.writeByte('\\')
-				vs.w.writeByte('n')
+				vs.scratch[0], vs.scratch[1] = '\\', 'n'
+				vs.w.write(vs.scratch[:2])
 			case '\r':
-				vs.w.writeByte('\\')
-				vs.w.writeByte('r')
+				vs.scratch[0], vs.scratch[1] = '\\', 'r'
+				vs.w.write(vs.scratch[:2])
 			case '\t':
-				vs.w.writeByte('\\')
-				vs.w.writeByte('t')
+				vs.scratch[0], vs.scratch[1] = '\\', 't'
+				vs.w.write(vs.scratch[:2])
 			default:
 				// This vsodes bytes < 0x20 except for \n and \r,
 				// as well as <, > and &. The latter are escaped because they
 				// can lead to security holes when user-controlled strings
 				// are rendered into JSON and served to some browsers.
-				vs.w.writeString(`\u00`)
-				vs.w.writeByte(hex[b>>4])
-				vs.w.writeByte(hex[b&0xF])
+				vs.scratch[0], vs.scratch[1], vs.scratch[2], vs.scratch[3] = '\\', 'u', '0', '0'
+				vs.scratch[4] = hex[b>>4]
+				vs.scratch[5] = hex[b&0xF]
+				vs.w.write(vs.scratch[:6])
 			}
 			i++
 			start = i
@@ -116,9 +164,9 @@ func (vs *Visitor) OnString(s string) error {
 		c, size := utf8.DecodeRuneInString(s[i:])
 		if c == utf8.RuneError && size == 1 {
 			if start < i {
-				vs.w.writeString(s[start:i])
+				vs.writeString(s[start:i])
 			}
-			vs.w.writeString(`\ufffd`)
+			vs.w.write(invalidCharSym)
 			i += size
 			start = i
 			continue
@@ -132,10 +180,10 @@ func (vs *Visitor) OnString(s string) error {
 		// See http://timelessrepo.com/json-isnt-a-javascript-subset for discussion.
 		if c == '\u2028' || c == '\u2029' {
 			if start < i {
-				vs.w.writeString(s[start:i])
+				vs.writeString(s[start:i])
 			}
-			vs.w.writeString(`\u202`)
-			vs.w.writeByte(hex[c&0xF])
+			vs.writeString(`\u202`)
+			vs.writeByte(hex[c&0xF])
 			i += size
 			start = i
 			continue
@@ -143,24 +191,32 @@ func (vs *Visitor) OnString(s string) error {
 		i += size
 	}
 	if start < len(s) {
-		vs.w.writeString(s[start:])
+		vs.writeString(s[start:])
 	}
-	vs.w.writeByte('"')
+	vs.writeByte('"')
 	return nil
 }
 
 func (vs *Visitor) OnBool(b bool) error {
+	if err := vs.tryElemNext(); err != nil {
+		return err
+	}
+
 	var err error
 	if b {
-		err = vs.w.writeString("true")
+		err = vs.w.write(trueSymbol)
 	} else {
-		err = vs.w.writeString("false")
+		err = vs.w.write(falseSymbol)
 	}
 	return err
 }
 
 func (vs *Visitor) OnNil() error {
-	err := vs.w.writeString("null")
+	if err := vs.tryElemNext(); err != nil {
+		return err
+	}
+
+	err := vs.w.write(nullSymbol)
 	return err
 }
 
@@ -185,6 +241,10 @@ func (vs *Visitor) OnInt(i int) error {
 }
 
 func (vs *Visitor) onInt(v int64) error {
+	if err := vs.tryElemNext(); err != nil {
+		return err
+	}
+
 	/*
 		b := strconv.AppendInt(vs.scratch[:0], i, 10)
 		_, err := vs.w.Write(b)
@@ -218,6 +278,10 @@ func (vs *Visitor) OnUint(u uint) error {
 }
 
 func (vs *Visitor) onUint(u uint64) error {
+	if err := vs.tryElemNext(); err != nil {
+		return err
+	}
+
 	return vs.onNumber(false, u)
 	/*
 		b := strconv.AppendUint(vs.scratch[:0], u, 10)
@@ -276,6 +340,10 @@ func (vs *Visitor) OnFloat64(f float64) error {
 }
 
 func (vs *Visitor) onFloat(f float64, bits int) error {
+	if err := vs.tryElemNext(); err != nil {
+		return err
+	}
+
 	if math.IsInf(f, 0) || math.IsNaN(f) {
 		return fmt.Errorf("unsupported float value: %v", f)
 	}
@@ -283,4 +351,23 @@ func (vs *Visitor) onFloat(f float64, bits int) error {
 	b := strconv.AppendFloat(vs.scratch[:0], f, 'g', -1, bits)
 	err := vs.w.write(b)
 	return err
+}
+
+func (s *boolStack) init() {
+	s.stack = s.stack0[:0]
+}
+
+func (s *boolStack) push(b bool) {
+	s.stack = append(s.stack, s.current)
+	s.current = b
+}
+
+func (s *boolStack) pop() {
+	if len(s.stack) == 0 {
+		panic("pop from empty stack")
+	}
+
+	last := len(s.stack) - 1
+	s.current = s.stack[last]
+	s.stack = s.stack[:last]
 }

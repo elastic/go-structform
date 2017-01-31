@@ -9,7 +9,7 @@ import (
 	structform "github.com/urso/go-structform"
 )
 
-type parser struct {
+type Parser struct {
 	visitor structform.Visitor
 
 	// last fail state
@@ -105,29 +105,19 @@ var (
 )
 
 func ParseReader(in io.Reader, vs structform.Visitor) (int64, error) {
-	p := newParser(vs)
-	n, err := io.Copy(p, in)
-	if err == nil {
-		err = p.finalize()
-	}
-	return n, err
+	return NewParser(vs).ParseReader(in)
 }
 
 func Parse(b []byte, vs structform.Visitor) error {
-	p := newParser(vs)
-	p.err = p.feed(b)
-	if p.err != nil {
-		p.err = p.finalize()
-	}
-	return p.err
+	return NewParser(vs).Parse(b)
 }
 
 func ParseString(str string, vs structform.Visitor) error {
-	return Parse([]byte(str), vs)
+	return NewParser(vs).ParseString(str)
 }
 
-func newParser(vs structform.Visitor) *parser {
-	p := &parser{
+func NewParser(vs structform.Visitor) *Parser {
+	p := &Parser{
 		visitor: vs,
 	}
 	p.buffer = p.buffer0[:0]
@@ -138,7 +128,27 @@ func newParser(vs structform.Visitor) *parser {
 	return p
 }
 
-func (p *parser) finalize() error {
+func (p *Parser) Parse(b []byte) error {
+	p.err = p.feed(b)
+	if p.err != nil {
+		p.err = p.finalize()
+	}
+	return p.err
+}
+
+func (p *Parser) ParseReader(in io.Reader) (int64, error) {
+	n, err := io.Copy(p, in)
+	if err == nil {
+		err = p.finalize()
+	}
+	return n, err
+}
+
+func (p *Parser) ParseString(s string) error {
+	return p.Parse(str2Bytes(s))
+}
+
+func (p *Parser) finalize() error {
 	st := &p.state.current
 	incomplete := len(p.state.stack) > 0 ||
 		st.stateStep != stStart ||
@@ -150,7 +160,7 @@ func (p *parser) finalize() error {
 	return nil
 }
 
-func (p *parser) Write(b []byte) (int, error) {
+func (p *Parser) Write(b []byte) (int, error) {
 	p.err = p.feed(b)
 	if p.err != nil {
 		p.state.current = state{stFail, stStart}
@@ -159,7 +169,7 @@ func (p *parser) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-func (p *parser) feed(b []byte) error {
+func (p *Parser) feed(b []byte) error {
 	for len(b) > 0 {
 		var err error
 
@@ -205,7 +215,7 @@ func (p *parser) feed(b []byte) error {
 	return nil
 }
 
-func (p *parser) stepFixedValue(b []byte) ([]byte, error) {
+func (p *Parser) stepFixedValue(b []byte) ([]byte, error) {
 	var (
 		tmp []byte
 		err error
@@ -270,7 +280,7 @@ func (p *parser) stepFixedValue(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) stepString(b []byte) ([]byte, error) {
+func (p *Parser) stepString(b []byte) ([]byte, error) {
 	var (
 		err error
 		st  = &p.state.current
@@ -284,14 +294,14 @@ func (p *parser) stepString(b []byte) ([]byte, error) {
 		var tmp []byte
 		if b, tmp = p.collect(b, int(L)); tmp != nil {
 			p.popLenState()
-			err = p.visitor.OnString(string(tmp))
+			err = p.visitor.OnString(bytes2Str(tmp))
 		}
 	}
 
 	return b, err
 }
 
-func (p *parser) stepArrayInit(b []byte) ([]byte, error) {
+func (p *Parser) stepArrayInit(b []byte) ([]byte, error) {
 	var (
 		err error
 		st  = &p.state.current
@@ -310,7 +320,7 @@ func (p *parser) stepArrayInit(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) stepArrayDyn(b []byte) ([]byte, error) {
+func (p *Parser) stepArrayDyn(b []byte) ([]byte, error) {
 	if b[0] == arrEndMarker {
 		p.popState()
 		return b[1:], p.visitor.OnArrayFinished()
@@ -320,14 +330,10 @@ func (p *parser) stepArrayDyn(b []byte) ([]byte, error) {
 		st.stateStep = stCont // ensure continuation state is pushed to stack
 		return p.stepStart(b)
 	}
-
-	if err := p.visitor.OnElemNext(); err != nil {
-		return nil, err
-	}
 	return p.stepStart(b)
 }
 
-func (p *parser) stepArrayCount(b []byte) ([]byte, error) {
+func (p *Parser) stepArrayCount(b []byte) ([]byte, error) {
 	var (
 		st   = &p.state.current
 		step = st.stateStep
@@ -352,7 +358,7 @@ func (p *parser) stepArrayCount(b []byte) ([]byte, error) {
 	return p.stepStart(b) // read next value
 }
 
-func (p *parser) stepArrayTyped(b []byte) ([]byte, error) {
+func (p *Parser) stepArrayTyped(b []byte) ([]byte, error) {
 	step := p.state.current.stateStep
 
 	// parse typed array header
@@ -378,7 +384,7 @@ func (p *parser) stepArrayTyped(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) stepArrayCountedContent(b []byte) (bool, []byte, error) {
+func (p *Parser) stepArrayCountedContent(b []byte) (bool, []byte, error) {
 	end, b, err := p.checkArrEnd(b)
 	if err != nil {
 		return end, b, err
@@ -389,20 +395,15 @@ func (p *parser) stepArrayCountedContent(b []byte) (bool, []byte, error) {
 		return end, b, p.visitor.OnArrayFinished()
 	}
 
-	st := &p.state.current
-	if st.stateStep == stWithLen {
+	if st := &p.state.current; st.stateStep == stWithLen {
 		st.stateStep = stCont
-	} else {
-		if err = p.visitor.OnElemNext(); err != nil {
-			return end, b, err
-		}
 	}
 
 	p.length.current--
 	return end, b, err
 }
 
-func (p *parser) stepTypeLenHeader(b []byte, cont stateStep) ([]byte, error) {
+func (p *Parser) stepTypeLenHeader(b []byte, cont stateStep) ([]byte, error) {
 	st := p.state.current
 	step := st.stateStep
 
@@ -425,7 +426,7 @@ func (p *parser) stepTypeLenHeader(b []byte, cont stateStep) ([]byte, error) {
 	}
 }
 
-func (p *parser) stepObjectInit(b []byte) ([]byte, error) {
+func (p *Parser) stepObjectInit(b []byte) ([]byte, error) {
 	var (
 		st  = &p.state.current
 		err error
@@ -443,7 +444,7 @@ func (p *parser) stepObjectInit(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) stepObjectDyn(b []byte) ([]byte, error) {
+func (p *Parser) stepObjectDyn(b []byte) ([]byte, error) {
 	var (
 		err  error
 		st   = &p.state.current
@@ -465,24 +466,18 @@ func (p *parser) stepObjectDyn(b []byte) ([]byte, error) {
 		var tmp []byte
 		if b, tmp = p.collect(b, int(L)); tmp != nil {
 			p.popLen()
-			err = p.visitor.OnKey(string(tmp))
+			err = p.visitor.OnKey(bytes2Str(tmp))
 		}
 		st.stateStep = stCont
 	case stCont:
-		st.stateStep = stNextField
+		st.stateStep = stStart
 		b, err = p.stepStart(b)
-	case stNextField:
-		err = p.visitor.OnFieldNext()
-		if err == nil {
-			st.stateStep = stStart
-			b, err = p.stepLen(b, st.withStep(stFieldNameLen))
-		}
 	}
 
 	return b, err
 }
 
-func (p *parser) stepObjectCount(b []byte) ([]byte, error) {
+func (p *Parser) stepObjectCount(b []byte) ([]byte, error) {
 	st := &p.state.current
 	step := st.stateStep
 
@@ -490,14 +485,14 @@ func (p *parser) stepObjectCount(b []byte) ([]byte, error) {
 		return p.stepLen(b, st.withStep(stWithLen))
 	}
 
-	end, b, err := p.stepObjectCountedContent(b, p.stepStart)
+	end, b, err := p.stepObjectCountedContent(b, false)
 	if end {
 		p.popLenState()
 	}
 	return b, err
 }
 
-func (p *parser) stepObjectTyped(b []byte) ([]byte, error) {
+func (p *Parser) stepObjectTyped(b []byte) ([]byte, error) {
 	st := &p.state.current
 	step := st.stateStep
 
@@ -506,10 +501,7 @@ func (p *parser) stepObjectTyped(b []byte) ([]byte, error) {
 		return p.stepTypeLenHeader(b, stWithLen)
 	}
 
-	end, b, err := p.stepObjectCountedContent(b, func(b []byte) ([]byte, error) {
-		p.pushState(p.valueState.current)
-		return b, nil
-	})
+	end, b, err := p.stepObjectCountedContent(b, true)
 	if end {
 		p.popLenState()
 		p.valueState.pop()
@@ -517,10 +509,7 @@ func (p *parser) stepObjectTyped(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *parser) stepObjectCountedContent(
-	b []byte,
-	doValue func([]byte) ([]byte, error),
-) (bool, []byte, error) {
+func (p *Parser) stepObjectCountedContent(b []byte, typed bool) (bool, []byte, error) {
 	var (
 		err  error
 		st   = &p.state.current
@@ -552,23 +541,26 @@ func (p *parser) stepObjectCountedContent(
 		var tmp []byte
 		if b, tmp = p.collect(b, int(L)); tmp != nil {
 			p.popLen()
-			err = p.visitor.OnKey(string(tmp))
+			err = p.visitor.OnKey(bytes2Str(tmp))
 		}
 		st.stateStep = stCont
 
 	case stCont:
 		st.stateStep = stNextField
-		b, err = doValue(b)
+
+		// handle object field value
+		if typed {
+			p.pushState(p.valueState.current)
+		} else {
+			b, err = p.stepStart(b)
+		}
 
 	case stNextField:
 		p.length.current--
 		end, b, err = p.checkObjEnd(b)
 		if err == nil && !end {
-			err = p.visitor.OnFieldNext()
-			if err == nil {
-				st.stateStep = stFieldName
-				b, err = p.stepLen(b, st.withStep(stFieldNameLen))
-			}
+			st.stateStep = stFieldName
+			b, err = p.stepLen(b, st.withStep(stFieldNameLen))
 		}
 	}
 
@@ -578,15 +570,15 @@ func (p *parser) stepObjectCountedContent(
 	return end, b, err
 }
 
-func (p *parser) checkArrEnd(b []byte) (bool, []byte, error) {
+func (p *Parser) checkArrEnd(b []byte) (bool, []byte, error) {
 	return p.checkTEnd(b, arrEndMarker, errMissingArrEnd)
 }
 
-func (p *parser) checkObjEnd(b []byte) (bool, []byte, error) {
+func (p *Parser) checkObjEnd(b []byte) (bool, []byte, error) {
 	return p.checkTEnd(b, objEndMarker, errMissingObjEnd)
 }
 
-func (p *parser) checkTEnd(b []byte, marker byte, err error) (bool, []byte, error) {
+func (p *Parser) checkTEnd(b []byte, marker byte, err error) (bool, []byte, error) {
 	if p.length.current > 0 {
 		return false, b, nil
 	}
@@ -596,7 +588,7 @@ func (p *parser) checkTEnd(b []byte, marker byte, err error) (bool, []byte, erro
 	return true, b[1:], nil
 }
 
-func (p *parser) stepType(b []byte, cont state) ([]byte, error) {
+func (p *Parser) stepType(b []byte, cont state) ([]byte, error) {
 	marker := b[0]
 	b = b[1:]
 	p.state.current = cont
@@ -612,7 +604,7 @@ func (p *parser) stepType(b []byte, cont state) ([]byte, error) {
 	return b, nil
 }
 
-func (p *parser) stepLen(b []byte, cont state) ([]byte, error) {
+func (p *Parser) stepLen(b []byte, cont state) ([]byte, error) {
 	if p.marker == noMarker {
 		p.marker = b[0]
 		b = b[1:]
@@ -658,7 +650,7 @@ func (p *parser) stepLen(b []byte, cont state) ([]byte, error) {
 	return b, nil
 }
 
-func (p *parser) collect(b []byte, count int) ([]byte, []byte) {
+func (p *Parser) collect(b []byte, count int) ([]byte, []byte) {
 	if len(p.buffer) > 0 {
 		delta := len(p.buffer) - count
 		if delta > 0 {
@@ -694,7 +686,7 @@ func (p *parser) collect(b []byte, count int) ([]byte, []byte) {
 	return nil, nil
 }
 
-func (p *parser) stepStart(b []byte) ([]byte, error) {
+func (p *Parser) stepStart(b []byte) ([]byte, error) {
 	state, err := markerToStartState(b[0])
 	if err != nil {
 		return nil, err
@@ -714,17 +706,17 @@ func (p *parser) stepStart(b []byte) ([]byte, error) {
 	}
 }
 
-func (p *parser) advanceMarker(s state, b []byte) ([]byte, error) {
+func (p *Parser) advanceMarker(s state, b []byte) ([]byte, error) {
 	p.pushState(s)
 	return b[1:], nil
 }
 
-func (p *parser) pushState(next state) { p.state.push(next) }
-func (p *parser) popState()            { p.state.pop() }
-func (p *parser) pushLen(l int64)      { p.length.push(l) }
-func (p *parser) popLen()              { p.length.pop() }
+func (p *Parser) pushState(next state) { p.state.push(next) }
+func (p *Parser) popState()            { p.state.pop() }
+func (p *Parser) pushLen(l int64)      { p.length.push(l) }
+func (p *Parser) popLen()              { p.length.pop() }
 
-func (p *parser) popLenState() {
+func (p *Parser) popLenState() {
 	p.popState()
 	p.popLen()
 }

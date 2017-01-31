@@ -10,196 +10,239 @@ import (
 	"github.com/urso/go-structform/json"
 )
 
-func TestCheckWriterParserConsistent(t *testing.T) {
-	tests := []struct {
-		json   string
-		driver func(vs structform.Visitor)
-	}{
-		// primitives
-		{
-			"null",
-			func(vs structform.Visitor) { vs.OnNil() },
-		},
-		{
-			"true",
-			func(vs structform.Visitor) { vs.OnBool(true) },
-		},
-		{
-			"false",
-			func(vs structform.Visitor) { vs.OnBool(false) },
-		},
-		{
-			"10",
-			func(vs structform.Visitor) { vs.OnByte(10) },
-		},
-		{
-			"-10",
-			func(vs structform.Visitor) { vs.OnInt8(-10) },
-		},
-		{
-			"1024",
-			func(vs structform.Visitor) { vs.OnInt64(1024) },
-		},
-		{
-			"3.14",
-			func(vs structform.Visitor) { vs.OnFloat32(3.14) },
-		},
-		{
-			"7.1e+12",
-			func(vs structform.Visitor) { vs.OnFloat64(7.1e12) },
-		},
-		{
-			`"test"`,
-			func(vs structform.Visitor) { vs.OnString("test") },
-		},
-		{
-			`"test with \" being escaped"`,
-			func(vs structform.Visitor) { vs.OnString("test with \" being escaped") },
-		},
+var samples1 = []struct {
+	json   string
+	driver func(vs structform.ExtVisitor)
+}{
+	// primitives
+	{
+		"null",
+		func(vs structform.ExtVisitor) { vs.OnNil() },
+	},
+	{
+		"true",
+		func(vs structform.ExtVisitor) { vs.OnBool(true) },
+	},
+	{
+		"false",
+		func(vs structform.ExtVisitor) { vs.OnBool(false) },
+	},
+	{
+		"10",
+		func(vs structform.ExtVisitor) { vs.OnByte(10) },
+	},
+	{
+		"-10",
+		func(vs structform.ExtVisitor) { vs.OnInt8(-10) },
+	},
+	{
+		"1024",
+		func(vs structform.ExtVisitor) { vs.OnInt64(1024) },
+	},
+	{
+		"3.14",
+		func(vs structform.ExtVisitor) { vs.OnFloat32(3.14) },
+	},
+	{
+		"7.1e+12",
+		func(vs structform.ExtVisitor) { vs.OnFloat64(7.1e12) },
+	},
+	{
+		`"test"`,
+		func(vs structform.ExtVisitor) { vs.OnString("test") },
+	},
+	{
+		`"test with \" being escaped"`,
+		func(vs structform.ExtVisitor) { vs.OnString("test with \" being escaped") },
+	},
 
-		// arrays
-		{
-			`[]`,
-			func(vs structform.Visitor) {
-				vs.OnArrayStart(-1, structform.AnyType)
-				vs.OnArrayFinished()
-			},
+	// arrays
+	{
+		`[]`,
+		func(vs structform.ExtVisitor) {
+			vs.OnArrayStart(-1, structform.AnyType)
+			vs.OnArrayFinished()
 		},
-		{
-			`[[]]`,
-			func(vs structform.Visitor) {
-				vs.OnArrayStart(-1, structform.AnyType)
-				vs.OnArrayStart(-1, structform.AnyType)
-				vs.OnArrayFinished()
-				vs.OnArrayFinished()
-			},
+	},
+	{
+		`[[]]`,
+		func(vs structform.ExtVisitor) {
+			vs.OnArrayStart(-1, structform.AnyType)
+			vs.OnArrayStart(-1, structform.AnyType)
+			vs.OnArrayFinished()
+			vs.OnArrayFinished()
 		},
-		{
-			`[null,true,false,12345678910,3.14,"test"]`,
-			func(vs structform.Visitor) {
-				vs.OnArrayStart(-1, structform.AnyType)
-				vs.OnNil()
-				vs.OnBool(true)
-				vs.OnBool(false)
-				vs.OnInt64(12345678910)
-				vs.OnFloat64(3.14)
-				vs.OnString("test")
-				vs.OnArrayFinished()
-			},
+	},
+	{
+		`[null,true,false,12345678910,3.14,"test"]`,
+		func(vs structform.ExtVisitor) {
+			vs.OnArrayStart(-1, structform.AnyType)
+			vs.OnNil()
+			vs.OnBool(true)
+			vs.OnBool(false)
+			vs.OnInt64(12345678910)
+			vs.OnFloat64(3.14)
+			vs.OnString("test")
+			vs.OnArrayFinished()
 		},
-		{
-			`[1,true]`,
-			func(vs structform.Visitor) {
-				vs.OnArrayStart(2, structform.AnyType)
-				vs.OnInt8(1)
-				vs.OnBool(true)
-				vs.OnArrayFinished()
-			},
+	},
+	{
+		`[1,true]`,
+		func(vs structform.ExtVisitor) {
+			vs.OnArrayStart(2, structform.AnyType)
+			vs.OnInt8(1)
+			vs.OnBool(true)
+			vs.OnArrayFinished()
 		},
-		{
-			`[1,2,3]`,
-			func(vs structform.Visitor) {
-				ev := structform.EnsureExtVisitor(vs)
-				ev.OnInt8Array([]int8{1, 2, 3})
-			},
-		},
-		{
-			`["a","b","c"]`,
-			func(vs structform.Visitor) {
-				ev := structform.EnsureExtVisitor(vs)
-				ev.OnStringArray([]string{"a", "b", "c"})
-			},
-		},
+	},
+	{
+		`[1,2,3]`,
+		func() func(vs structform.ExtVisitor) {
+			a := []int8{1, 2, 3}
+			return func(vs structform.ExtVisitor) {
+				vs.OnInt8Array(a)
+			}
+		}(),
+	},
+	{
+		`["a","b","c"]`,
+		func() func(vs structform.ExtVisitor) {
+			a := []string{"a", "b", "c"}
+			return func(vs structform.ExtVisitor) {
+				vs.OnStringArray(a)
+			}
+		}(),
+	},
 
-		// objects
-		{
-			`{}`,
-			func(vs structform.Visitor) {
-				vs.OnObjectStart(-1, structform.AnyType)
-				vs.OnObjectFinished()
-			},
+	// objects
+	{
+		`{}`,
+		func(vs structform.ExtVisitor) {
+			vs.OnObjectStart(-1, structform.AnyType)
+			vs.OnObjectFinished()
 		},
-		{
-			`{"a":true,"b":1,"c":"test"}`,
-			func(vs structform.Visitor) {
+	},
+	{
+		`{"a":true,"b":1,"c":"test"}`,
+		func(vs structform.ExtVisitor) {
+			vs.OnObjectStart(-1, structform.AnyType)
+			vs.OnKey("a")
+			vs.OnBool(true)
+			vs.OnKey("b")
+			vs.OnInt8(1)
+			vs.OnKey("c")
+			vs.OnString("test")
+			vs.OnObjectFinished()
+		},
+	},
+	{
+		`{"a":[1,2,3]}`,
+		func() func(structform.ExtVisitor) {
+			a := []int8{1, 2, 3}
+			return func(vs structform.ExtVisitor) {
 				vs.OnObjectStart(-1, structform.AnyType)
 				vs.OnKey("a")
-				vs.OnBool(true)
-				vs.OnFieldNext()
-				vs.OnKey("b")
-				vs.OnInt8(1)
-				vs.OnFieldNext()
-				vs.OnKey("c")
-				vs.OnString("test")
+				vs.OnInt8Array(a)
 				vs.OnObjectFinished()
-			},
+			}
+		}(),
+	},
+	{
+		`{}`,
+		func(vs structform.ExtVisitor) {
+			vs.OnObjectStart(0, structform.AnyType)
+			vs.OnObjectFinished()
 		},
-		{
-			`{"a":[1,2,3]}`,
-			func(vs structform.Visitor) {
-				ev := structform.EnsureExtVisitor(vs)
-				ev.OnObjectStart(-1, structform.AnyType)
-				ev.OnKey("a")
-				ev.OnInt8Array([]int8{1, 2, 3})
-				ev.OnObjectFinished()
-			},
+	},
+	{
+		`{"a":true,"b":1,"c":"test"}`,
+		func(vs structform.ExtVisitor) {
+			vs.OnObjectStart(3, structform.AnyType)
+			vs.OnKey("a")
+			vs.OnBool(true)
+			vs.OnKey("b")
+			vs.OnInt8(1)
+			vs.OnKey("c")
+			vs.OnString("test")
+			vs.OnObjectFinished()
 		},
-		{
-			`{}`,
-			func(vs structform.Visitor) {
-				vs.OnObjectStart(0, structform.AnyType)
-				vs.OnObjectFinished()
-			},
-		},
-		{
-			`{"a":true,"b":1,"c":"test"}`,
-			func(vs structform.Visitor) {
-				vs.OnObjectStart(3, structform.AnyType)
+	},
+	{
+		`{"a":[1,2,3]}`,
+
+		func() func(structform.ExtVisitor) {
+			a := []int8{1, 2, 3}
+			return func(vs structform.ExtVisitor) {
+				vs.OnObjectStart(1, structform.AnyType)
 				vs.OnKey("a")
-				vs.OnBool(true)
-				vs.OnFieldNext()
-				vs.OnKey("b")
-				vs.OnInt8(1)
-				vs.OnFieldNext()
-				vs.OnKey("c")
-				vs.OnString("test")
+				vs.OnInt8Array(a)
 				vs.OnObjectFinished()
-			},
-		},
-		{
-			`{"a":[1,2,3]}`,
-			func(vs structform.Visitor) {
-				ev := structform.EnsureExtVisitor(vs)
-				ev.OnObjectStart(1, structform.AnyType)
-				ev.OnKey("a")
-				ev.OnInt8Array([]int8{1, 2, 3})
-				ev.OnObjectFinished()
-			},
-		},
-		{
-			`{"a":"test1","b":"test2","c":"test3"}`,
-			func(vs structform.Visitor) {
-				ev := structform.EnsureExtVisitor(vs)
-				ev.OnStringObject(map[string]string{
-					"a": "test1",
-					"b": "test2",
-					"c": "test3",
-				})
-			},
-		},
-		{
-			`{"a":1,"b":2,"c":3}`,
-			func(vs structform.Visitor) {
-				ev := structform.EnsureExtVisitor(vs)
-				ev.OnUintObject(map[string]uint{
-					"a": 1,
-					"b": 2,
-					"c": 3,
-				})
-			},
-		},
+			}
+		}(),
+	},
+	{
+		`{"a":"test1","b":"test2","c":"test3"}`,
+		func() func(vs structform.ExtVisitor) {
+			m := map[string]string{"a": "test1", "b": "test2", "c": "test3"}
+			return func(vs structform.ExtVisitor) {
+				vs.OnStringObject(m)
+			}
+		}(),
+	},
+	{
+		`{"a":1,"b":2,"c":3}`,
+		func() func(vs structform.ExtVisitor) {
+			m := map[string]uint{"a": 1, "b": 2, "c": 3}
+			return func(vs structform.ExtVisitor) {
+				vs.OnUintObject(m)
+			}
+		}(),
+	},
+}
+
+type noopWriter struct{}
+
+func (noopWriter) Write(b []byte) (int, error) {
+	return len(b), nil
+}
+
+func BenchmarkVisitor(b *testing.B) {
+	tests := samples1
+	for _, test := range tests {
+		vs := NewVisitor(noopWriter{})
+		b.Run(test.json, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				test.driver(vs)
+			}
+		})
+	}
+}
+
+func BenchmarkTranscodeUBJSONToJSON(b *testing.B) {
+	tests := samples1
+	buffers := make([]bytes.Buffer, len(tests))
+	for i, test := range tests {
+		vs := NewVisitor(&buffers[i])
+		test.driver(vs)
 	}
 
+	for i, test := range tests {
+		transcoder := NewParser(json.NewVisitor(noopWriter{}))
+		buf := buffers[i].Bytes()
+		b.Run(test.json, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				err := transcoder.Parse(buf)
+				if err != nil {
+					b.Error(err)
+					return
+				}
+			}
+		})
+	}
+}
+
+func TestCheckWriterParserConsistent(t *testing.T) {
+	tests := samples1
 	for i, test := range tests {
 		t.Logf("run test (%v): %v", i, test.json)
 

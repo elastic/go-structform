@@ -9,15 +9,7 @@ func (e extObjVisitor) OnStringObject(m map[string]string) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -34,15 +26,7 @@ func (e extObjVisitor) OnBoolObject(m map[string]bool) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -59,15 +43,7 @@ func (e extObjVisitor) OnInt8Object(m map[string]int8) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -84,15 +60,7 @@ func (e extObjVisitor) OnInt16Object(m map[string]int16) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -109,15 +77,7 @@ func (e extObjVisitor) OnInt32Object(m map[string]int32) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -134,15 +94,7 @@ func (e extObjVisitor) OnInt64Object(m map[string]int64) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -159,15 +111,7 @@ func (e extObjVisitor) OnIntObject(m map[string]int) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -184,15 +128,7 @@ func (e extObjVisitor) OnUint8Object(m map[string]uint8) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -209,15 +145,7 @@ func (e extObjVisitor) OnUint16Object(m map[string]uint16) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -234,15 +162,7 @@ func (e extObjVisitor) OnUint32Object(m map[string]uint32) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -259,15 +179,7 @@ func (e extObjVisitor) OnUint64Object(m map[string]uint64) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -284,15 +196,7 @@ func (e extObjVisitor) OnUintObject(m map[string]uint) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -309,15 +213,7 @@ func (e extObjVisitor) OnFloat32Object(m map[string]float32) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}
@@ -334,15 +230,7 @@ func (e extObjVisitor) OnFloat64Object(m map[string]float64) error {
 		return err
 	}
 
-	first := true
 	for k, v := range m {
-		if first {
-			if err := e.OnFieldNext(); err != nil {
-				return err
-			}
-		}
-		first = false
-
 		if err := e.OnKey(k); err != nil {
 			return err
 		}

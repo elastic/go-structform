@@ -4,16 +4,6 @@ type extArrVisitor struct {
 	Visitor
 }
 
-/*
-func EnsureArrayValueVisitor(v Visitor) ExtVisitor {
-	if ev, ok := v.(ExtVisitor); ok {
-		return ev
-	}
-
-	return extArrVisitor{v}
-}
-*/
-
 func (ev extArrVisitor) OnStringArray(a []string) error {
 	if err := ev.OnArrayStart(len(a), StringType); err != nil {
 		return err
