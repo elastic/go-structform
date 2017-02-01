@@ -42,7 +42,8 @@ func (vs *Visitor) writeByte(b byte) error {
 }
 
 func (vs *Visitor) optionalCount(l int) error {
-	if l < 0 {
+	if l <= 0 {
+		// don't add size if array is empty or size is unknown
 		return nil
 	}
 
