@@ -14,35 +14,51 @@ type visitor interface {
 	structform.ExtVisitor
 }
 
+type Iterator struct {
+	v   visitor
+	ctx context
+}
+
+type context struct {
+	opts options
+}
+
+type options struct {
+	tag string
+}
+
 func Iter(v interface{}, vs structform.Visitor) error {
-	ev := structform.EnsureExtVisitor(vs).(visitor)
-	c := context{}
-	return visitInterfaceValue(&c, ev, v)
+	return NewIterator(vs).Iter(v)
+}
+
+func NewIterator(vs structform.Visitor) *Iterator {
+	return &Iterator{
+		v: structform.EnsureExtVisitor(vs).(visitor),
+		ctx: context{
+			opts: options{
+				tag: "struct",
+			},
+		},
+	}
+}
+
+func (i *Iterator) Iter(v interface{}) error {
+	return visitInterfaceValue(&i.ctx, i.v, v)
 }
 
 func visitInterfaceValue(c *context, V visitor, v interface{}) error {
-	if f := getTypeVisitor(v); f != nil {
+	if f := getVisitorGoTypes(v); f != nil {
 		return f(c, V, v)
+	}
+
+	if tmp, f := getVisitorConvert(v); f != nil {
+		return f(c, V, tmp)
 	}
 
 	return visitAnyReflect(c, V, reflect.ValueOf(v))
 }
 
-func getTypeVisitor(v interface{}) visitingFn {
-	if f := getVisitorGoTypes(v); f != nil {
-		return f
-	}
-
-	// use reflection to cast potential named map/slice types,
-	// e.g. `type MyMap map[string]interface{}`
-	if f := getVisitorConvert(v); f != nil {
-		return f
-	}
-
-	return nil
-}
-
-func getVisitorConvert(v interface{}) visitingFn {
+func getVisitorConvert(v interface{}) (interface{}, visitingFn) {
 	t := reflect.TypeOf(v)
 	cast := false
 
@@ -64,10 +80,7 @@ func getVisitorConvert(v interface{}) visitingFn {
 		}
 	}
 
-	if !cast {
-		return nil
-	}
-	return getVisitorGoTypes(v)
+	return v, getVisitorGoTypes(v)
 }
 
 func getVisitorGoTypes(v interface{}) visitingFn {
