@@ -6,20 +6,20 @@ import (
 	structform "github.com/urso/go-structform"
 )
 
-type foldFn func(c *context, V visitor, v interface{}) error
+type foldFn func(c *foldContext, v interface{}) error
 
-type reFoldFn func(c *context, V visitor, v reflect.Value) error
+type reFoldFn func(c *foldContext, v reflect.Value) error
 
 type visitor interface {
 	structform.ExtVisitor
 }
 
 type Iterator struct {
-	v   visitor
-	ctx context
+	ctx foldContext
 }
 
-type context struct {
+type foldContext struct {
+	visitor
 	opts options
 }
 
@@ -33,8 +33,8 @@ func Fold(v interface{}, vs structform.Visitor) error {
 
 func NewIterator(vs structform.Visitor) *Iterator {
 	return &Iterator{
-		v: structform.EnsureExtVisitor(vs).(visitor),
-		ctx: context{
+		ctx: foldContext{
+			visitor: structform.EnsureExtVisitor(vs).(visitor),
 			opts: options{
 				tag: "struct",
 			},
@@ -43,19 +43,19 @@ func NewIterator(vs structform.Visitor) *Iterator {
 }
 
 func (i *Iterator) Fold(v interface{}) error {
-	return foldInterfaceValue(&i.ctx, i.v, v)
+	return foldInterfaceValue(&i.ctx, v)
 }
 
-func foldInterfaceValue(c *context, V visitor, v interface{}) error {
+func foldInterfaceValue(C *foldContext, v interface{}) error {
 	if f := getFoldGoTypes(v); f != nil {
-		return f(c, V, v)
+		return f(C, v)
 	}
 
 	if tmp, f := getFoldConvert(v); f != nil {
-		return f(c, V, tmp)
+		return f(C, tmp)
 	}
 
-	return foldAnyReflect(c, V, reflect.ValueOf(v))
+	return foldAnyReflect(C, reflect.ValueOf(v))
 }
 
 func getFoldConvert(v interface{}) (interface{}, foldFn) {

@@ -26,82 +26,82 @@ var (
 
 var tMapAny = reflect.TypeOf(map[string]interface{}(nil))
 
-func reflectMapAny(c *context, V visitor, v reflect.Value) error {
+func reflectMapAny(C *foldContext, v reflect.Value) error {
 	if v.Type().Name() != "" {
 		v = v.Convert(tArrayAny)
 	}
-	return foldMapInterface(c, V, v.Interface())
+	return foldMapInterface(C, v.Interface())
 }
 
-func foldMapInterface(c *context, V visitor, v interface{}) error {
+func foldMapInterface(C *foldContext, v interface{}) error {
 	m := v.(map[string]interface{})
-	if err := V.OnObjectStart(len(m), structform.AnyType); err != nil {
+	if err := C.OnObjectStart(len(m), structform.AnyType); err != nil {
 		return err
 	}
 
 	for k, v := range m {
-		if err := V.OnKey(k); err != nil {
+		if err := C.OnKey(k); err != nil {
 			return err
 		}
-		if err := foldInterfaceValue(c, V, v); err != nil {
+		if err := foldInterfaceValue(C, v); err != nil {
 			return err
 		}
 	}
-	return V.OnObjectFinished()
+	return C.OnObjectFinished()
 }
 
-func foldMapBool(_ *context, V visitor, v interface{}) error {
-	return V.OnBoolObject(v.(map[string]bool))
+func foldMapBool(C *foldContext, v interface{}) error {
+	return C.OnBoolObject(v.(map[string]bool))
 }
 
-func foldMapString(_ *context, V visitor, v interface{}) error {
-	return V.OnStringObject(v.(map[string]string))
+func foldMapString(C *foldContext, v interface{}) error {
+	return C.OnStringObject(v.(map[string]string))
 }
 
-func foldMapInt8(_ *context, V visitor, v interface{}) error {
-	return V.OnInt8Object(v.(map[string]int8))
+func foldMapInt8(C *foldContext, v interface{}) error {
+	return C.OnInt8Object(v.(map[string]int8))
 }
 
-func foldMapInt16(_ *context, V visitor, v interface{}) error {
-	return V.OnInt16Object(v.(map[string]int16))
+func foldMapInt16(C *foldContext, v interface{}) error {
+	return C.OnInt16Object(v.(map[string]int16))
 }
 
-func foldMapInt32(_ *context, V visitor, v interface{}) error {
-	return V.OnInt32Object(v.(map[string]int32))
+func foldMapInt32(C *foldContext, v interface{}) error {
+	return C.OnInt32Object(v.(map[string]int32))
 }
 
-func foldMapInt64(_ *context, V visitor, v interface{}) error {
-	return V.OnInt64Object(v.(map[string]int64))
+func foldMapInt64(C *foldContext, v interface{}) error {
+	return C.OnInt64Object(v.(map[string]int64))
 }
 
-func foldMapInt(_ *context, V visitor, v interface{}) error {
-	return V.OnIntObject(v.(map[string]int))
+func foldMapInt(C *foldContext, v interface{}) error {
+	return C.OnIntObject(v.(map[string]int))
 }
 
-func foldMapUint8(_ *context, V visitor, v interface{}) error {
-	return V.OnUint8Object(v.(map[string]uint8))
+func foldMapUint8(C *foldContext, v interface{}) error {
+	return C.OnUint8Object(v.(map[string]uint8))
 }
 
-func foldMapUint16(_ *context, V visitor, v interface{}) error {
-	return V.OnUint16Object(v.(map[string]uint16))
+func foldMapUint16(C *foldContext, v interface{}) error {
+	return C.OnUint16Object(v.(map[string]uint16))
 }
 
-func foldMapUint32(_ *context, V visitor, v interface{}) error {
-	return V.OnUint32Object(v.(map[string]uint32))
+func foldMapUint32(C *foldContext, v interface{}) error {
+	return C.OnUint32Object(v.(map[string]uint32))
 }
 
-func foldMapUint64(_ *context, V visitor, v interface{}) error {
-	return V.OnUint64Object(v.(map[string]uint64))
+func foldMapUint64(C *foldContext, v interface{}) error {
+	return C.OnUint64Object(v.(map[string]uint64))
 }
 
-func foldMapUint(_ *context, V visitor, v interface{}) error {
-	return V.OnUintObject(v.(map[string]uint))
+func foldMapUint(C *foldContext, v interface{}) error {
+	return C.OnUintObject(v.(map[string]uint))
 }
 
-func foldMapFloat32(_ *context, V visitor, v interface{}) error {
-	return V.OnFloat32Object(v.(map[string]float32))
+func foldMapFloat32(C *foldContext, v interface{}) error {
+	return C.OnFloat32Object(v.(map[string]float32))
 }
 
-func foldMapFloat64(_ *context, V visitor, v interface{}) error {
-	return V.OnFloat64Object(v.(map[string]float64))
+func foldMapFloat64(C *foldContext, v interface{}) error {
+	return C.OnFloat64Object(v.(map[string]float64))
 }

@@ -17,7 +17,7 @@ type typeFoldRegistry struct {
 
 var foldRegistry = newTypeFoldRegistry()
 
-func getReflectFold(c *context, t reflect.Type) (reFoldFn, error) {
+func getReflectFold(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	var err error
 
 	f := foldRegistry.find(t)
@@ -52,24 +52,24 @@ func getReflectFold(c *context, t reflect.Type) (reFoldFn, error) {
 	return f, nil
 }
 
-func getReflectFoldMap(c *context, t reflect.Type) (reFoldFn, error) {
+func getReflectFoldMap(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	iterVisitor, err := getReflectFoldMapKeys(c, t)
 	if err != nil {
 		return nil, err
 	}
 
-	return func(c *context, V visitor, rv reflect.Value) error {
-		if err := V.OnObjectStart(rv.Len(), structform.AnyType); err != nil {
+	return func(C *foldContext, rv reflect.Value) error {
+		if err := C.OnObjectStart(rv.Len(), structform.AnyType); err != nil {
 			return err
 		}
-		if err := iterVisitor(c, V, rv); err != nil {
+		if err := iterVisitor(C, rv); err != nil {
 			return err
 		}
-		return V.OnObjectFinished()
+		return C.OnObjectFinished()
 	}, nil
 }
 
-func getReflectFoldMapKeys(c *context, t reflect.Type) (reFoldFn, error) {
+func getReflectFoldMapKeys(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	if t.Key().Kind() != reflect.String {
 		return nil, errMapRequiresStringKey
 	}
@@ -83,12 +83,12 @@ func getReflectFoldMapKeys(c *context, t reflect.Type) (reFoldFn, error) {
 }
 
 func makeMapKeysFold(elemVisitor reFoldFn) reFoldFn {
-	return func(c *context, V visitor, rv reflect.Value) error {
+	return func(C *foldContext, rv reflect.Value) error {
 		for _, k := range rv.MapKeys() {
-			if err := V.OnKey(k.String()); err != nil {
+			if err := C.OnKey(k.String()); err != nil {
 				return err
 			}
-			if err := elemVisitor(c, V, rv.MapIndex(k)); err != nil {
+			if err := elemVisitor(C, rv.MapIndex(k)); err != nil {
 				return err
 			}
 		}
@@ -96,7 +96,7 @@ func makeMapKeysFold(elemVisitor reFoldFn) reFoldFn {
 	}
 }
 
-func getFoldPointer(c *context, t reflect.Type) (reFoldFn, error) {
+func getFoldPointer(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	N, bt := baseType(t)
 	elemVisitor, err := getReflectFold(c, bt)
 	if err != nil {
@@ -110,18 +110,18 @@ func makePointerFold(N int, elemVisitor reFoldFn) reFoldFn {
 		return elemVisitor
 	}
 
-	return func(c *context, V visitor, v reflect.Value) error {
+	return func(C *foldContext, v reflect.Value) error {
 		for i := 0; i < N; i++ {
 			if v.IsNil() {
-				return V.OnNil()
+				return C.OnNil()
 			}
 			v = v.Elem()
 		}
-		return elemVisitor(c, V, v)
+		return elemVisitor(C, v)
 	}
 }
 
-func getReflectFoldStruct(c *context, t reflect.Type, inline bool) (reFoldFn, error) {
+func getReflectFoldStruct(c *foldContext, t reflect.Type, inline bool) (reFoldFn, error) {
 	fields, err := getStructFieldsFolds(c, t)
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func getReflectFoldStruct(c *context, t reflect.Type, inline bool) (reFoldFn, er
 	return makeStructFold(fields), nil
 }
 
-func getStructFieldsFolds(c *context, t reflect.Type) ([]reFoldFn, error) {
+func getStructFieldsFolds(c *foldContext, t reflect.Type) ([]reFoldFn, error) {
 	count := t.NumField()
 	fields := make([]reFoldFn, 0, count)
 
@@ -161,21 +161,21 @@ func getStructFieldsFolds(c *context, t reflect.Type) ([]reFoldFn, error) {
 
 func makeStructFold(fields []reFoldFn) reFoldFn {
 	fieldsVisitor := makeFieldsFold(fields)
-	return func(c *context, V visitor, v reflect.Value) error {
-		if err := V.OnObjectStart(len(fields), structform.AnyType); err != nil {
+	return func(C *foldContext, v reflect.Value) error {
+		if err := C.OnObjectStart(len(fields), structform.AnyType); err != nil {
 			return err
 		}
-		if err := fieldsVisitor(c, V, v); err != nil {
+		if err := fieldsVisitor(C, v); err != nil {
 			return err
 		}
-		return V.OnObjectFinished()
+		return C.OnObjectFinished()
 	}
 }
 
 func makeFieldsFold(fields []reFoldFn) reFoldFn {
-	return func(c *context, V visitor, v reflect.Value) error {
+	return func(C *foldContext, v reflect.Value) error {
 		for _, fv := range fields {
-			if err := fv(c, V, v); err != nil {
+			if err := fv(C, v); err != nil {
 				return err
 			}
 		}
@@ -183,7 +183,7 @@ func makeFieldsFold(fields []reFoldFn) reFoldFn {
 	}
 }
 
-func fieldFold(c *context, t reflect.Type, idx int) (reFoldFn, error) {
+func fieldFold(c *foldContext, t reflect.Type, idx int) (reFoldFn, error) {
 	st := t.Field(idx)
 
 	name := st.Name
@@ -209,15 +209,15 @@ func fieldFold(c *context, t reflect.Type, idx int) (reFoldFn, error) {
 }
 
 func makeFieldFold(name string, idx int, fn reFoldFn) (reFoldFn, error) {
-	return func(c *context, V visitor, v reflect.Value) error {
-		if err := V.OnKey(name); err != nil {
+	return func(C *foldContext, v reflect.Value) error {
+		if err := C.OnKey(name); err != nil {
 			return err
 		}
-		return fn(c, V, v.Field(idx))
+		return fn(C, v.Field(idx))
 	}, nil
 }
 
-func fieldValueFold(c *context, opts tagOptions, t reflect.Type) (reFoldFn, error) {
+func fieldValueFold(c *foldContext, opts tagOptions, t reflect.Type) (reFoldFn, error) {
 	if !opts.squash {
 		return getReflectFold(c, t)
 	}
@@ -243,25 +243,25 @@ func fieldValueFold(c *context, opts tagOptions, t reflect.Type) (reFoldFn, erro
 	return makePointerFold(N, baseVisitor), nil
 }
 
-func getReflectFoldSlice(c *context, t reflect.Type) (reFoldFn, error) {
+func getReflectFoldSlice(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	elemVisitor, err := getReflectFold(c, t.Elem())
 	if err != nil {
 		return nil, err
 	}
 
-	return func(c *context, V visitor, rv reflect.Value) error {
+	return func(C *foldContext, rv reflect.Value) error {
 		count := rv.Len()
 
-		if err := V.OnArrayStart(count, structform.AnyType); err != nil {
+		if err := C.OnArrayStart(count, structform.AnyType); err != nil {
 			return err
 		}
 		for i := 0; i < count; i++ {
-			if err := elemVisitor(c, V, rv.Index(i)); err != nil {
+			if err := elemVisitor(C, rv.Index(i)); err != nil {
 				return err
 			}
 		}
 
-		return V.OnArrayFinished()
+		return C.OnArrayFinished()
 	}, nil
 }
 
@@ -374,12 +374,12 @@ func getReflectFoldPrimitive(t reflect.Type) reFoldFn {
 	return nil
 }
 
-func foldAnyReflect(c *context, V visitor, v reflect.Value) error {
-	f, err := getReflectFold(c, v.Type())
+func foldAnyReflect(C *foldContext, v reflect.Value) error {
+	f, err := getReflectFold(C, v.Type())
 	if err != nil {
 		return err
 	}
-	return f(c, V, v)
+	return f(C, v)
 }
 
 func newTypeFoldRegistry() *typeFoldRegistry {
@@ -400,11 +400,11 @@ func (r *typeFoldRegistry) set(t reflect.Type, f reFoldFn) {
 
 func liftFold(sample interface{}, fn foldFn) reFoldFn {
 	t := reflect.TypeOf(sample)
-	return func(c *context, V visitor, v reflect.Value) error {
+	return func(C *foldContext, v reflect.Value) error {
 		if v.Type().Name() != "" {
 			v = v.Convert(t)
 		}
-		return fn(c, V, v.Interface())
+		return fn(C, v.Interface())
 	}
 }
 

@@ -26,43 +26,39 @@ var (
 
 var tArrayAny = reflect.TypeOf([]interface{}(nil))
 
-func reFoldArrAny(c *context, V visitor, v reflect.Value) error {
+func reFoldArrAny(c *foldContext, v reflect.Value) error {
 	if v.Type().Name() != "" {
 		v = v.Convert(tArrayAny)
 	}
-	return foldArrInterface(c, V, v.Interface())
+	return foldArrInterface(c, v.Interface())
 }
 
-func foldArrInterface(c *context, V visitor, v interface{}) error {
+func foldArrInterface(C *foldContext, v interface{}) error {
 	a := v.([]interface{})
-	if err := V.OnArrayStart(len(a), structform.AnyType); err != nil {
+	if err := C.OnArrayStart(len(a), structform.AnyType); err != nil {
 		return err
 	}
 
 	for _, v := range a {
-		if err := foldInterfaceValue(c, V, v); err != nil {
+		if err := foldInterfaceValue(C, v); err != nil {
 			return err
 		}
 	}
-	return V.OnArrayFinished()
+	return C.OnArrayFinished()
 }
 
-func foldArrBool(_ *context, V visitor, v interface{}) error   { return V.OnBoolArray(v.([]bool)) }
-func foldArrString(_ *context, V visitor, v interface{}) error { return V.OnStringArray(v.([]string)) }
-func foldArrInt8(_ *context, V visitor, v interface{}) error   { return V.OnInt8Array(v.([]int8)) }
-func foldArrInt16(_ *context, V visitor, v interface{}) error  { return V.OnInt16Array(v.([]int16)) }
-func foldArrInt32(_ *context, V visitor, v interface{}) error  { return V.OnInt32Array(v.([]int32)) }
-func foldArrInt64(_ *context, V visitor, v interface{}) error  { return V.OnInt64Array(v.([]int64)) }
-func foldArrInt(_ *context, V visitor, v interface{}) error    { return V.OnIntArray(v.([]int)) }
-func foldBytes(_ *context, V visitor, v interface{}) error     { return V.OnBytes(v.([]byte)) }
-func foldArrUint8(_ *context, V visitor, v interface{}) error  { return V.OnUint8Array(v.([]uint8)) }
-func foldArrUint16(_ *context, V visitor, v interface{}) error { return V.OnUint16Array(v.([]uint16)) }
-func foldArrUint32(_ *context, V visitor, v interface{}) error { return V.OnUint32Array(v.([]uint32)) }
-func foldArrUint64(_ *context, V visitor, v interface{}) error { return V.OnUint64Array(v.([]uint64)) }
-func foldArrUint(_ *context, V visitor, v interface{}) error   { return V.OnUintArray(v.([]uint)) }
-func foldArrFloat32(_ *context, V visitor, v interface{}) error {
-	return V.OnFloat32Array(v.([]float32))
-}
-func foldArrFloat64(_ *context, V visitor, v interface{}) error {
-	return V.OnFloat64Array(v.([]float64))
-}
+func foldArrBool(C *foldContext, v interface{}) error    { return C.OnBoolArray(v.([]bool)) }
+func foldArrString(C *foldContext, v interface{}) error  { return C.OnStringArray(v.([]string)) }
+func foldArrInt8(C *foldContext, v interface{}) error    { return C.OnInt8Array(v.([]int8)) }
+func foldArrInt16(C *foldContext, v interface{}) error   { return C.OnInt16Array(v.([]int16)) }
+func foldArrInt32(C *foldContext, v interface{}) error   { return C.OnInt32Array(v.([]int32)) }
+func foldArrInt64(C *foldContext, v interface{}) error   { return C.OnInt64Array(v.([]int64)) }
+func foldArrInt(C *foldContext, v interface{}) error     { return C.OnIntArray(v.([]int)) }
+func foldBytes(C *foldContext, v interface{}) error      { return C.OnBytes(v.([]byte)) }
+func foldArrUint8(C *foldContext, v interface{}) error   { return C.OnUint8Array(v.([]uint8)) }
+func foldArrUint16(C *foldContext, v interface{}) error  { return C.OnUint16Array(v.([]uint16)) }
+func foldArrUint32(C *foldContext, v interface{}) error  { return C.OnUint32Array(v.([]uint32)) }
+func foldArrUint64(C *foldContext, v interface{}) error  { return C.OnUint64Array(v.([]uint64)) }
+func foldArrUint(C *foldContext, v interface{}) error    { return C.OnUintArray(v.([]uint)) }
+func foldArrFloat32(C *foldContext, v interface{}) error { return C.OnFloat32Array(v.([]float32)) }
+func foldArrFloat64(C *foldContext, v interface{}) error { return C.OnFloat64Array(v.([]float64)) }
