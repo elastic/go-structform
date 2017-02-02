@@ -6,9 +6,9 @@ import (
 	structform "github.com/urso/go-structform"
 )
 
-type visitingFn func(c *context, V visitor, v interface{}) error
+type foldFn func(c *context, V visitor, v interface{}) error
 
-type reflectFn func(c *context, V visitor, v reflect.Value) error
+type reFoldFn func(c *context, V visitor, v reflect.Value) error
 
 type visitor interface {
 	structform.ExtVisitor
@@ -27,8 +27,8 @@ type options struct {
 	tag string
 }
 
-func Iter(v interface{}, vs structform.Visitor) error {
-	return NewIterator(vs).Iter(v)
+func Fold(v interface{}, vs structform.Visitor) error {
+	return NewIterator(vs).Fold(v)
 }
 
 func NewIterator(vs structform.Visitor) *Iterator {
@@ -42,23 +42,23 @@ func NewIterator(vs structform.Visitor) *Iterator {
 	}
 }
 
-func (i *Iterator) Iter(v interface{}) error {
-	return visitInterfaceValue(&i.ctx, i.v, v)
+func (i *Iterator) Fold(v interface{}) error {
+	return foldInterfaceValue(&i.ctx, i.v, v)
 }
 
-func visitInterfaceValue(c *context, V visitor, v interface{}) error {
-	if f := getVisitorGoTypes(v); f != nil {
+func foldInterfaceValue(c *context, V visitor, v interface{}) error {
+	if f := getFoldGoTypes(v); f != nil {
 		return f(c, V, v)
 	}
 
-	if tmp, f := getVisitorConvert(v); f != nil {
+	if tmp, f := getFoldConvert(v); f != nil {
 		return f(c, V, tmp)
 	}
 
-	return visitAnyReflect(c, V, reflect.ValueOf(v))
+	return foldAnyReflect(c, V, reflect.ValueOf(v))
 }
 
-func getVisitorConvert(v interface{}) (interface{}, visitingFn) {
+func getFoldConvert(v interface{}) (interface{}, foldFn) {
 	t := reflect.TypeOf(v)
 	cast := false
 
@@ -80,122 +80,122 @@ func getVisitorConvert(v interface{}) (interface{}, visitingFn) {
 		}
 	}
 
-	return v, getVisitorGoTypes(v)
+	return v, getFoldGoTypes(v)
 }
 
-func getVisitorGoTypes(v interface{}) visitingFn {
+func getFoldGoTypes(v interface{}) foldFn {
 	switch v.(type) {
 	case nil:
-		return visitNil
+		return foldNil
 
 	case bool:
-		return visitBool
+		return foldBool
 	case []bool:
-		return visitArrBool
+		return foldArrBool
 	case map[string]bool:
-		return visitMapBool
+		return foldMapBool
 
 	case int8:
-		return visitInt8
+		return foldInt8
 	case int16:
-		return visitInt16
+		return foldInt16
 	case int32:
-		return visitInt32
+		return foldInt32
 	case int64:
-		return visitInt64
+		return foldInt64
 	case int:
-		return visitInt
+		return foldInt
 
 	case []int8:
-		return visitArrInt8
+		return foldArrInt8
 	case []int16:
-		return visitArrInt16
+		return foldArrInt16
 	case []int32:
-		return visitArrInt32
+		return foldArrInt32
 	case []int64:
-		return visitArrInt64
+		return foldArrInt64
 	case []int:
-		return visitArrInt
+		return foldArrInt
 
 	case map[string]int8:
-		return visitMapInt8
+		return foldMapInt8
 	case map[string]int16:
-		return visitMapInt16
+		return foldMapInt16
 	case map[string]int32:
-		return visitMapInt32
+		return foldMapInt32
 	case map[string]int64:
-		return visitMapInt64
+		return foldMapInt64
 	case map[string]int:
-		return visitMapInt
+		return foldMapInt
 
 		/*
 			case byte:
 				return visitByte
 		*/
 	case uint8:
-		return visitUint8
+		return foldUint8
 	case uint16:
-		return visitUint16
+		return foldUint16
 	case uint32:
-		return visitUint32
+		return foldUint32
 	case uint64:
-		return visitUint64
+		return foldUint64
 	case uint:
-		return visitUint
+		return foldUint
 
 	case []byte:
-		return visitBytes
+		return foldBytes
 		/*
 			case []uint8:
 				return visitArrUint8
 		*/
 	case []uint16:
-		return visitArrUint16
+		return foldArrUint16
 	case []uint32:
-		return visitArrUint32
+		return foldArrUint32
 	case []uint64:
-		return visitArrUint64
+		return foldArrUint64
 	case []uint:
-		return visitArrUint
+		return foldArrUint
 
 	case map[string]uint8:
-		return visitMapUint8
+		return foldMapUint8
 	case map[string]uint16:
-		return visitMapUint16
+		return foldMapUint16
 	case map[string]uint32:
-		return visitMapUint32
+		return foldMapUint32
 	case map[string]uint64:
-		return visitMapUint64
+		return foldMapUint64
 	case map[string]uint:
-		return visitMapUint
+		return foldMapUint
 
 	case float32:
-		return visitFloat32
+		return foldFloat32
 	case float64:
-		return visitFloat64
+		return foldFloat64
 
 	case []float32:
-		return visitArrFloat32
+		return foldArrFloat32
 	case []float64:
-		return visitArrFloat64
+		return foldArrFloat64
 
 	case map[string]float32:
-		return visitMapFloat32
+		return foldMapFloat32
 	case map[string]float64:
-		return visitMapFloat64
+		return foldMapFloat64
 
 	case string:
-		return visitString
+		return foldString
 
 	case []string:
-		return visitArrString
+		return foldArrString
 	case map[string]string:
-		return visitMapString
+		return foldMapString
 
 	case []interface{}:
-		return visitArrInterface
+		return foldArrInterface
 	case map[string]interface{}:
-		return visitMapInterface
+		return foldMapInterface
 	}
 
 	return nil

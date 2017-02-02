@@ -7,62 +7,62 @@ import (
 )
 
 var (
-	// reflectArrAny     = reflectCast([]interface{}(nil), visitArrInterface)
-	reflectArrBool    = reflectCast([]bool(nil), visitArrBool)
-	reflectArrInt     = reflectCast([]int(nil), visitArrInt)
-	reflectArrInt8    = reflectCast([]int8(nil), visitArrInt8)
-	reflectArrInt16   = reflectCast([]int16(nil), visitArrInt16)
-	reflectArrInt32   = reflectCast([]int32(nil), visitArrInt32)
-	reflectArrInt64   = reflectCast([]int64(nil), visitArrInt64)
-	reflectArrUint    = reflectCast([]uint(nil), visitArrUint)
-	reflectArrUint8   = reflectCast([]uint8(nil), visitArrUint8)
-	reflectArrUint16  = reflectCast([]uint16(nil), visitArrUint16)
-	reflectArrUint32  = reflectCast([]uint32(nil), visitArrUint32)
-	reflectArrUint64  = reflectCast([]uint64(nil), visitArrUint64)
-	reflectArrFloat32 = reflectCast([]float32(nil), visitArrFloat32)
-	reflectArrFloat64 = reflectCast([]float64(nil), visitArrFloat64)
-	reflectArrString  = reflectCast([]string(nil), visitArrString)
+	// reFoldArrAny  = liftFold([]interface{}(nil), visitArrInterface)
+	reFoldArrBool    = liftFold([]bool(nil), foldArrBool)
+	reFoldArrInt     = liftFold([]int(nil), foldArrInt)
+	reFoldArrInt8    = liftFold([]int8(nil), foldArrInt8)
+	reFoldArrInt16   = liftFold([]int16(nil), foldArrInt16)
+	reFoldArrInt32   = liftFold([]int32(nil), foldArrInt32)
+	reFoldArrInt64   = liftFold([]int64(nil), foldArrInt64)
+	reFoldArrUint    = liftFold([]uint(nil), foldArrUint)
+	reFoldArrUint8   = liftFold([]uint8(nil), foldArrUint8)
+	reFoldArrUint16  = liftFold([]uint16(nil), foldArrUint16)
+	reFoldArrUint32  = liftFold([]uint32(nil), foldArrUint32)
+	reFoldArrUint64  = liftFold([]uint64(nil), foldArrUint64)
+	reFoldArrFloat32 = liftFold([]float32(nil), foldArrFloat32)
+	reFoldArrFloat64 = liftFold([]float64(nil), foldArrFloat64)
+	reFoldArrString  = liftFold([]string(nil), foldArrString)
 )
 
 var tArrayAny = reflect.TypeOf([]interface{}(nil))
 
-func reflectArrAny(c *context, V visitor, v reflect.Value) error {
+func reFoldArrAny(c *context, V visitor, v reflect.Value) error {
 	if v.Type().Name() != "" {
 		v = v.Convert(tArrayAny)
 	}
-	return visitArrInterface(c, V, v.Interface())
+	return foldArrInterface(c, V, v.Interface())
 }
 
-func visitArrInterface(c *context, V visitor, v interface{}) error {
+func foldArrInterface(c *context, V visitor, v interface{}) error {
 	a := v.([]interface{})
 	if err := V.OnArrayStart(len(a), structform.AnyType); err != nil {
 		return err
 	}
 
 	for _, v := range a {
-		if err := visitInterfaceValue(c, V, v); err != nil {
+		if err := foldInterfaceValue(c, V, v); err != nil {
 			return err
 		}
 	}
 	return V.OnArrayFinished()
 }
 
-func visitArrBool(_ *context, V visitor, v interface{}) error   { return V.OnBoolArray(v.([]bool)) }
-func visitArrString(_ *context, V visitor, v interface{}) error { return V.OnStringArray(v.([]string)) }
-func visitArrInt8(_ *context, V visitor, v interface{}) error   { return V.OnInt8Array(v.([]int8)) }
-func visitArrInt16(_ *context, V visitor, v interface{}) error  { return V.OnInt16Array(v.([]int16)) }
-func visitArrInt32(_ *context, V visitor, v interface{}) error  { return V.OnInt32Array(v.([]int32)) }
-func visitArrInt64(_ *context, V visitor, v interface{}) error  { return V.OnInt64Array(v.([]int64)) }
-func visitArrInt(_ *context, V visitor, v interface{}) error    { return V.OnIntArray(v.([]int)) }
-func visitBytes(_ *context, V visitor, v interface{}) error     { return V.OnBytes(v.([]byte)) }
-func visitArrUint8(_ *context, V visitor, v interface{}) error  { return V.OnUint8Array(v.([]uint8)) }
-func visitArrUint16(_ *context, V visitor, v interface{}) error { return V.OnUint16Array(v.([]uint16)) }
-func visitArrUint32(_ *context, V visitor, v interface{}) error { return V.OnUint32Array(v.([]uint32)) }
-func visitArrUint64(_ *context, V visitor, v interface{}) error { return V.OnUint64Array(v.([]uint64)) }
-func visitArrUint(_ *context, V visitor, v interface{}) error   { return V.OnUintArray(v.([]uint)) }
-func visitArrFloat32(_ *context, V visitor, v interface{}) error {
+func foldArrBool(_ *context, V visitor, v interface{}) error   { return V.OnBoolArray(v.([]bool)) }
+func foldArrString(_ *context, V visitor, v interface{}) error { return V.OnStringArray(v.([]string)) }
+func foldArrInt8(_ *context, V visitor, v interface{}) error   { return V.OnInt8Array(v.([]int8)) }
+func foldArrInt16(_ *context, V visitor, v interface{}) error  { return V.OnInt16Array(v.([]int16)) }
+func foldArrInt32(_ *context, V visitor, v interface{}) error  { return V.OnInt32Array(v.([]int32)) }
+func foldArrInt64(_ *context, V visitor, v interface{}) error  { return V.OnInt64Array(v.([]int64)) }
+func foldArrInt(_ *context, V visitor, v interface{}) error    { return V.OnIntArray(v.([]int)) }
+func foldBytes(_ *context, V visitor, v interface{}) error     { return V.OnBytes(v.([]byte)) }
+func foldArrUint8(_ *context, V visitor, v interface{}) error  { return V.OnUint8Array(v.([]uint8)) }
+func foldArrUint16(_ *context, V visitor, v interface{}) error { return V.OnUint16Array(v.([]uint16)) }
+func foldArrUint32(_ *context, V visitor, v interface{}) error { return V.OnUint32Array(v.([]uint32)) }
+func foldArrUint64(_ *context, V visitor, v interface{}) error { return V.OnUint64Array(v.([]uint64)) }
+func foldArrUint(_ *context, V visitor, v interface{}) error   { return V.OnUintArray(v.([]uint)) }
+func foldArrFloat32(_ *context, V visitor, v interface{}) error {
 	return V.OnFloat32Array(v.([]float32))
 }
-func visitArrFloat64(_ *context, V visitor, v interface{}) error {
+func foldArrFloat64(_ *context, V visitor, v interface{}) error {
 	return V.OnFloat64Array(v.([]float64))
 }

@@ -125,7 +125,7 @@ func TestIter2JsonConsistent(t *testing.T) {
 
 		var buf bytes.Buffer
 		iter := NewIterator(json.NewVisitor(&buf))
-		err := iter.Iter(test.value)
+		err := iter.Fold(test.value)
 		if err != nil {
 			t.Error(err)
 			continue
@@ -143,7 +143,7 @@ func BenchmarkCompareEncode(b *testing.B) {
 		return func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				buf.N = 0
-				if err := enc.Iter(v); err != nil {
+				if err := enc.Fold(v); err != nil {
 					b.Error(err)
 					return
 				}

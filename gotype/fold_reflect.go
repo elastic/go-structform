@@ -10,37 +10,37 @@ import (
 	structform "github.com/urso/go-structform"
 )
 
-type typeVisitorRegistry struct {
+type typeFoldRegistry struct {
 	mu sync.RWMutex
-	m  map[reflect.Type]reflectFn
+	m  map[reflect.Type]reFoldFn
 }
 
-var visitorRegistry = newTypeVisitorRegistry()
+var foldRegistry = newTypeFoldRegistry()
 
-func getVisitorReflect(c *context, t reflect.Type) (reflectFn, error) {
+func getReflectFold(c *context, t reflect.Type) (reFoldFn, error) {
 	var err error
 
-	f := visitorRegistry.find(t)
+	f := foldRegistry.find(t)
 	if f != nil {
 		return f, nil
 	}
 
-	f = getVisitorReflectPrimitive(t)
+	f = getReflectFoldPrimitive(t)
 	if f != nil {
 		return f, nil
 	}
 
 	switch t.Kind() {
 	case reflect.Ptr:
-		f, err = getVisitorPointer(c, t)
+		f, err = getFoldPointer(c, t)
 	case reflect.Struct:
-		f, err = getVisitorReflectStruct(c, t, false)
+		f, err = getReflectFoldStruct(c, t, false)
 	case reflect.Map:
-		f, err = getVisitorReflectMap(c, t)
+		f, err = getReflectFoldMap(c, t)
 	case reflect.Slice, reflect.Array:
-		f, err = getVisitorReflectSlice(c, t)
+		f, err = getReflectFoldSlice(c, t)
 	case reflect.Interface:
-		f = visitAnyReflect
+		f = foldAnyReflect
 	default:
 		return nil, errUnsupported
 	}
@@ -48,12 +48,12 @@ func getVisitorReflect(c *context, t reflect.Type) (reflectFn, error) {
 	if err != nil {
 		return nil, err
 	}
-	visitorRegistry.set(t, f)
+	foldRegistry.set(t, f)
 	return f, nil
 }
 
-func getVisitorReflectMap(c *context, t reflect.Type) (reflectFn, error) {
-	iterVisitor, err := getVisitorReflectMapKeys(c, t)
+func getReflectFoldMap(c *context, t reflect.Type) (reFoldFn, error) {
+	iterVisitor, err := getReflectFoldMapKeys(c, t)
 	if err != nil {
 		return nil, err
 	}
@@ -69,20 +69,20 @@ func getVisitorReflectMap(c *context, t reflect.Type) (reflectFn, error) {
 	}, nil
 }
 
-func getVisitorReflectMapKeys(c *context, t reflect.Type) (reflectFn, error) {
+func getReflectFoldMapKeys(c *context, t reflect.Type) (reFoldFn, error) {
 	if t.Key().Kind() != reflect.String {
 		return nil, errMapRequiresStringKey
 	}
 
-	elemVisitor, err := getVisitorReflect(c, t.Elem())
+	elemVisitor, err := getReflectFold(c, t.Elem())
 	if err != nil {
 		return nil, err
 	}
 
-	return makeMapKeysVisitor(elemVisitor), nil
+	return makeMapKeysFold(elemVisitor), nil
 }
 
-func makeMapKeysVisitor(elemVisitor reflectFn) reflectFn {
+func makeMapKeysFold(elemVisitor reFoldFn) reFoldFn {
 	return func(c *context, V visitor, rv reflect.Value) error {
 		for _, k := range rv.MapKeys() {
 			if err := V.OnKey(k.String()); err != nil {
@@ -96,16 +96,16 @@ func makeMapKeysVisitor(elemVisitor reflectFn) reflectFn {
 	}
 }
 
-func getVisitorPointer(c *context, t reflect.Type) (reflectFn, error) {
+func getFoldPointer(c *context, t reflect.Type) (reFoldFn, error) {
 	N, bt := baseType(t)
-	elemVisitor, err := getVisitorReflect(c, bt)
+	elemVisitor, err := getReflectFold(c, bt)
 	if err != nil {
 		return nil, err
 	}
-	return makePointerVisitor(N, elemVisitor), nil
+	return makePointerFold(N, elemVisitor), nil
 }
 
-func makePointerVisitor(N int, elemVisitor reflectFn) reflectFn {
+func makePointerFold(N int, elemVisitor reFoldFn) reFoldFn {
 	if N == 0 {
 		return elemVisitor
 	}
@@ -121,24 +121,24 @@ func makePointerVisitor(N int, elemVisitor reflectFn) reflectFn {
 	}
 }
 
-func getVisitorReflectStruct(c *context, t reflect.Type, inline bool) (reflectFn, error) {
-	fields, err := getStructFieldsVisitors(c, t)
+func getReflectFoldStruct(c *context, t reflect.Type, inline bool) (reFoldFn, error) {
+	fields, err := getStructFieldsFolds(c, t)
 	if err != nil {
 		return nil, err
 	}
 
 	if inline {
-		return makeFieldsVisitor(fields), nil
+		return makeFieldsFold(fields), nil
 	}
-	return makeStructVisitor(fields), nil
+	return makeStructFold(fields), nil
 }
 
-func getStructFieldsVisitors(c *context, t reflect.Type) ([]reflectFn, error) {
+func getStructFieldsFolds(c *context, t reflect.Type) ([]reFoldFn, error) {
 	count := t.NumField()
-	fields := make([]reflectFn, 0, count)
+	fields := make([]reFoldFn, 0, count)
 
 	for i := 0; i < count; i++ {
-		fv, err := fieldVisitor(c, t, i)
+		fv, err := fieldFold(c, t, i)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +151,7 @@ func getStructFieldsVisitors(c *context, t reflect.Type) ([]reflectFn, error) {
 	}
 
 	if len(fields) < cap(fields) {
-		tmp := make([]reflectFn, len(fields))
+		tmp := make([]reFoldFn, len(fields))
 		copy(tmp, fields)
 		fields = tmp
 	}
@@ -159,8 +159,8 @@ func getStructFieldsVisitors(c *context, t reflect.Type) ([]reflectFn, error) {
 	return fields, nil
 }
 
-func makeStructVisitor(fields []reflectFn) reflectFn {
-	fieldsVisitor := makeFieldsVisitor(fields)
+func makeStructFold(fields []reFoldFn) reFoldFn {
+	fieldsVisitor := makeFieldsFold(fields)
 	return func(c *context, V visitor, v reflect.Value) error {
 		if err := V.OnObjectStart(len(fields), structform.AnyType); err != nil {
 			return err
@@ -172,7 +172,7 @@ func makeStructVisitor(fields []reflectFn) reflectFn {
 	}
 }
 
-func makeFieldsVisitor(fields []reflectFn) reflectFn {
+func makeFieldsFold(fields []reFoldFn) reFoldFn {
 	return func(c *context, V visitor, v reflect.Value) error {
 		for _, fv := range fields {
 			if err := fv(c, V, v); err != nil {
@@ -183,7 +183,7 @@ func makeFieldsVisitor(fields []reflectFn) reflectFn {
 	}
 }
 
-func fieldVisitor(c *context, t reflect.Type, idx int) (reflectFn, error) {
+func fieldFold(c *context, t reflect.Type, idx int) (reFoldFn, error) {
 	st := t.Field(idx)
 
 	name := st.Name
@@ -200,15 +200,15 @@ func fieldVisitor(c *context, t reflect.Type, idx int) (reflectFn, error) {
 		name = strings.ToLower(name)
 	}
 
-	valueVisitor, err := fieldValueVisitor(c, tagOpts, st.Type)
+	valueVisitor, err := fieldValueFold(c, tagOpts, st.Type)
 	if err != nil {
 		return nil, err
 	}
 
-	return makeFieldVisitor(name, idx, valueVisitor)
+	return makeFieldFold(name, idx, valueVisitor)
 }
 
-func makeFieldVisitor(name string, idx int, fn reflectFn) (reflectFn, error) {
+func makeFieldFold(name string, idx int, fn reFoldFn) (reFoldFn, error) {
 	return func(c *context, V visitor, v reflect.Value) error {
 		if err := V.OnKey(name); err != nil {
 			return err
@@ -217,22 +217,22 @@ func makeFieldVisitor(name string, idx int, fn reflectFn) (reflectFn, error) {
 	}, nil
 }
 
-func fieldValueVisitor(c *context, opts tagOptions, t reflect.Type) (reflectFn, error) {
+func fieldValueFold(c *context, opts tagOptions, t reflect.Type) (reFoldFn, error) {
 	if !opts.squash {
-		return getVisitorReflect(c, t)
+		return getReflectFold(c, t)
 	}
 
 	var (
 		N, bt       = baseType(t)
-		baseVisitor reflectFn
+		baseVisitor reFoldFn
 		err         error
 	)
 
 	switch bt.Kind() {
 	case reflect.Struct:
-		baseVisitor, err = getVisitorReflectStruct(c, bt, true)
+		baseVisitor, err = getReflectFoldStruct(c, bt, true)
 	case reflect.Map:
-		baseVisitor, err = getVisitorReflectMapKeys(c, bt)
+		baseVisitor, err = getReflectFoldMapKeys(c, bt)
 	default:
 		err = errSquashNeedObject
 	}
@@ -240,11 +240,11 @@ func fieldValueVisitor(c *context, opts tagOptions, t reflect.Type) (reflectFn, 
 		return nil, err
 	}
 
-	return makePointerVisitor(N, baseVisitor), nil
+	return makePointerFold(N, baseVisitor), nil
 }
 
-func getVisitorReflectSlice(c *context, t reflect.Type) (reflectFn, error) {
-	elemVisitor, err := getVisitorReflect(c, t.Elem())
+func getReflectFoldSlice(c *context, t reflect.Type) (reFoldFn, error) {
+	elemVisitor, err := getReflectFold(c, t.Elem())
 	if err != nil {
 		return nil, err
 	}
@@ -267,69 +267,69 @@ func getVisitorReflectSlice(c *context, t reflect.Type) (reflectFn, error) {
 
 // TODO: create visitors casting the actual values via reflection instead of
 //       golang type conversion:
-func getVisitorReflectPrimitive(t reflect.Type) reflectFn {
+func getReflectFoldPrimitive(t reflect.Type) reFoldFn {
 	switch t.Kind() {
 	case reflect.Bool:
-		return reflectBool
+		return reFoldBool
 	case reflect.Int:
-		return reflectInt
+		return reFoldInt
 	case reflect.Int8:
-		return reflectInt8
+		return reFoldInt8
 	case reflect.Int16:
-		return reflectInt16
+		return reFoldInt16
 	case reflect.Int32:
-		return reflectInt32
+		return reFoldInt32
 	case reflect.Int64:
-		return reflectInt64
+		return reFoldInt64
 	case reflect.Uint:
-		return reflectUint
+		return reFoldUint
 	case reflect.Uint8:
-		return reflectUint8
+		return reFoldUint8
 	case reflect.Uint16:
-		return reflectUint16
+		return reFoldUint16
 	case reflect.Uint32:
-		return reflectUint32
+		return reFoldUint32
 	case reflect.Uint64:
-		return reflectUint64
+		return reFoldUint64
 	case reflect.Float32:
-		return reflectFloat32
+		return reFoldFloat32
 	case reflect.Float64:
-		return reflectFloat64
+		return reFoldFloat64
 	case reflect.String:
-		return reflectString
+		return reFoldString
 
 	case reflect.Slice:
 		switch t.Elem().Kind() {
 		case reflect.Interface:
-			return reflectArrAny
+			return reFoldArrAny
 		case reflect.Bool:
-			return reflectArrBool
+			return reFoldArrBool
 		case reflect.Int:
-			return reflectArrInt
+			return reFoldArrInt
 		case reflect.Int8:
-			return reflectArrInt8
+			return reFoldArrInt8
 		case reflect.Int16:
-			return reflectArrInt16
+			return reFoldArrInt16
 		case reflect.Int32:
-			return reflectArrInt32
+			return reFoldArrInt32
 		case reflect.Int64:
-			return reflectArrInt64
+			return reFoldArrInt64
 		case reflect.Uint:
-			return reflectArrUint
+			return reFoldArrUint
 		case reflect.Uint8:
-			return reflectArrUint8
+			return reFoldArrUint8
 		case reflect.Uint16:
-			return reflectArrUint16
+			return reFoldArrUint16
 		case reflect.Uint32:
-			return reflectArrUint32
+			return reFoldArrUint32
 		case reflect.Uint64:
-			return reflectArrUint64
+			return reFoldArrUint64
 		case reflect.Float32:
-			return reflectArrFloat32
+			return reFoldArrFloat32
 		case reflect.Float64:
-			return reflectArrFloat64
+			return reFoldArrFloat64
 		case reflect.String:
-			return reflectArrString
+			return reFoldArrString
 		}
 
 	case reflect.Map:
@@ -341,64 +341,64 @@ func getVisitorReflectPrimitive(t reflect.Type) reflectFn {
 		case reflect.Interface:
 			return reflectMapAny
 		case reflect.Bool:
-			return reflectMapBool
+			return reFoldMapBool
 		case reflect.Int:
-			return reflectMapInt
+			return reFoldMapInt
 		case reflect.Int8:
-			return reflectMapInt8
+			return reFoldMapInt8
 		case reflect.Int16:
-			return reflectMapInt16
+			return reFoldMapInt16
 		case reflect.Int32:
-			return reflectMapInt32
+			return reFoldMapInt32
 		case reflect.Int64:
-			return reflectMapInt64
+			return reFoldMapInt64
 		case reflect.Uint:
-			return reflectMapUint
+			return reFoldMapUint
 		case reflect.Uint8:
-			return reflectMapUint8
+			return reFoldMapUint8
 		case reflect.Uint16:
-			return reflectMapUint16
+			return reFoldMapUint16
 		case reflect.Uint32:
-			return reflectMapUint32
+			return reFoldMapUint32
 		case reflect.Uint64:
-			return reflectMapUint64
+			return reFoldMapUint64
 		case reflect.Float32:
-			return reflectMapFloat32
+			return reFoldMapFloat32
 		case reflect.Float64:
-			return reflectMapFloat64
+			return reFoldMapFloat64
 		case reflect.String:
-			return reflectMapString
+			return reFoldMapString
 		}
 	}
 
 	return nil
 }
 
-func visitAnyReflect(c *context, V visitor, v reflect.Value) error {
-	f, err := getVisitorReflect(c, v.Type())
+func foldAnyReflect(c *context, V visitor, v reflect.Value) error {
+	f, err := getReflectFold(c, v.Type())
 	if err != nil {
 		return err
 	}
 	return f(c, V, v)
 }
 
-func newTypeVisitorRegistry() *typeVisitorRegistry {
-	return &typeVisitorRegistry{m: map[reflect.Type]reflectFn{}}
+func newTypeFoldRegistry() *typeFoldRegistry {
+	return &typeFoldRegistry{m: map[reflect.Type]reFoldFn{}}
 }
 
-func (r *typeVisitorRegistry) find(t reflect.Type) reflectFn {
+func (r *typeFoldRegistry) find(t reflect.Type) reFoldFn {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.m[t]
 }
 
-func (r *typeVisitorRegistry) set(t reflect.Type, f reflectFn) {
+func (r *typeFoldRegistry) set(t reflect.Type, f reFoldFn) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.m[t] = f
 }
 
-func reflectCast(sample interface{}, fn visitingFn) reflectFn {
+func liftFold(sample interface{}, fn foldFn) reFoldFn {
 	t := reflect.TypeOf(sample)
 	return func(c *context, V visitor, v reflect.Value) error {
 		if v.Type().Name() != "" {
