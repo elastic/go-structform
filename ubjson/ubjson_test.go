@@ -206,7 +206,7 @@ func (noopWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-func BenchmarkVisitor(b *testing.B) {
+func BenchmarkUBJSONVisitor(b *testing.B) {
 	tests := samples1
 	for _, test := range tests {
 		vs := NewVisitor(noopWriter{})

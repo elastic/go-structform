@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/urso/go-structform/json"
 	"github.com/urso/go-structform/ubjson"
+
+	gojson "encoding/json"
 )
 
 type mapstr map[string]interface{}
@@ -133,7 +135,7 @@ func TestIter2JsonConsistent(t *testing.T) {
 	}
 }
 
-func BenchmarkEncodeJSON(b *testing.B) {
+func BenchmarkCompareEncode(b *testing.B) {
 	tests := samples1
 
 	buf := &countWriter{}
@@ -157,5 +159,17 @@ func BenchmarkEncodeJSON(b *testing.B) {
 		b.Run("ubjson "+name, makeRun(test.value, NewIterator(ubjson.NewVisitor(buf))))
 
 		b.Run("json "+name, makeRun(test.value, NewIterator(json.NewVisitor(buf))))
+
+		b.Run("go-json "+name, func(b *testing.B) {
+			enc := gojson.NewEncoder(buf)
+			for i := 0; i < b.N; i++ {
+				buf.N = 0
+				if err := enc.Encode(test.value); err != nil {
+					b.Error(err)
+					return
+				}
+				b.SetBytes(buf.N)
+			}
+		})
 	}
 }
