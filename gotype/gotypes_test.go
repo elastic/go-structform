@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/ugorji/go/codec"
 	"github.com/urso/go-structform/json"
 	"github.com/urso/go-structform/ubjson"
 
@@ -18,59 +19,59 @@ var foldSamples = []struct {
 	json  string
 	value interface{}
 }{
-	// // primitives
-	// {`null`, nil},
-	// {`true`, true},
-	// {`false`, false},
-	// {`10`, int8(10)},
-	// {`10`, int32(10)},
-	// {`10`, int(10)},
-	// {`10`, uint(10)},
-	// {`10`, uint8(10)},
-	// {`10`, uint16(10)},
-	// {`10`, uint32(10)},
-	// {`12340`, uint16(12340)},
-	// {`1234567`, uint32(1234567)},
-	// {`12345678190`, uint64(12345678190)},
-	// {`-10`, int8(-10)},
-	// {`-10`, int32(-10)},
-	// {`-10`, int(-10)},
-	// {`3.14`, float32(3.14)},
-	// {`3.14`, float64(3.14)},
-	// {`"test"`, "test"},
-	// {`"test with \" being escaped"`, "test with \" being escaped"},
+	// primitives
+	{`null`, nil},
+	{`true`, true},
+	{`false`, false},
+	{`10`, int8(10)},
+	{`10`, int32(10)},
+	{`10`, int(10)},
+	{`10`, uint(10)},
+	{`10`, uint8(10)},
+	{`10`, uint16(10)},
+	{`10`, uint32(10)},
+	{`12340`, uint16(12340)},
+	{`1234567`, uint32(1234567)},
+	{`12345678190`, uint64(12345678190)},
+	{`-10`, int8(-10)},
+	{`-10`, int32(-10)},
+	{`-10`, int(-10)},
+	{`3.14`, float32(3.14)},
+	{`3.14`, float64(3.14)},
+	{`"test"`, "test"},
+	{`"test with \" being escaped"`, "test with \" being escaped"},
 
-	// // // arrays
-	// {`[]`, []uint8{}},
-	// {`[]`, []string{}},
-	// {`[]`, []interface{}{}},
-	// {`[]`, []struct{ A string }{}},
-	// {`[[]]`, [][]uint8{{}}},
-	// {`[[]]`, [][]string{{}}},
-	// {`[[]]`, [][]interface{}{{}}},
-	// {`[[]]`, [][]struct{ A string }{{}}},
-	// {
-	// 	`[null,true,false,12345678910,3.14,"test"]`,
-	// 	[]interface{}{nil, true, false, uint64(12345678910), 3.14, "test"},
-	// },
-	// {`[1,2,3,4,5,6,7,8,9,10]`, []int8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
-	// {`[1,2,3,4,5,6,7,8,9,10]`, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
-	// {`[1,2,3,4,5,6,7,8,9,10]`, []uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
-	// {`[1,2,3,4,5,6,7,8,9,10]`, []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
-	// {`[1,2,3,4,5,6,7,8,9,10]`, []interface{}{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
-	// {`["testa","testb","testc"]`, []string{"testa", "testb", "testc"}},
-	// {`["testa","testb","testc"]`, []interface{}{"testa", "testb", "testc"}},
+	// arrays
+	{`[]`, []uint8{}},
+	{`[]`, []string{}},
+	{`[]`, []interface{}{}},
+	{`[]`, []struct{ A string }{}},
+	{`[[]]`, [][]uint8{{}}},
+	{`[[]]`, [][]string{{}}},
+	{`[[]]`, [][]interface{}{{}}},
+	{`[[]]`, [][]struct{ A string }{{}}},
+	{
+		`[null,true,false,12345678910,3.14,"test"]`,
+		[]interface{}{nil, true, false, uint64(12345678910), 3.14, "test"},
+	},
+	{`[1,2,3,4,5,6,7,8,9,10]`, []int8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+	{`[1,2,3,4,5,6,7,8,9,10]`, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+	{`[1,2,3,4,5,6,7,8,9,10]`, []uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+	{`[1,2,3,4,5,6,7,8,9,10]`, []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+	{`[1,2,3,4,5,6,7,8,9,10]`, []interface{}{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+	{`["testa","testb","testc"]`, []string{"testa", "testb", "testc"}},
+	{`["testa","testb","testc"]`, []interface{}{"testa", "testb", "testc"}},
 
 	// objects
-	// {`{}`, map[string]interface{}{}},
-	// {`{}`, map[string]int8{}},
-	// {`{}`, map[string]int64{}},
-	// {`{}`, map[string]struct{ A *int }{}},
-	// {`{}`, mapstr{}},
-	// {`{"a":null}`, map[string]interface{}{"a": nil}},
-	// {`{"a":null}`, mapstr{"a": nil}},
-	// {`{"a":null}`, struct{ A *int }{}},
-	// {`{"a":null}`, struct{ A *struct{ B int } }{}},
+	{`{}`, map[string]interface{}{}},
+	{`{}`, map[string]int8{}},
+	{`{}`, map[string]int64{}},
+	{`{}`, map[string]struct{ A *int }{}},
+	{`{}`, mapstr{}},
+	{`{"a":null}`, map[string]interface{}{"a": nil}},
+	{`{"a":null}`, mapstr{"a": nil}},
+	{`{"a":null}`, struct{ A *int }{}},
+	{`{"a":null}`, struct{ A *struct{ B int } }{}},
 
 	// unstable tests due to randomize field order in maps
 	// {`{"a":true,"b":1,"c":"test"}`, map[string]interface{}{"a": true, "b": 1, "c": "test"}},
@@ -139,11 +140,11 @@ func BenchmarkCompareEncode(b *testing.B) {
 	tests := foldSamples
 
 	buf := &countWriter{}
-	makeRun := func(v interface{}, enc *Iterator) func(*testing.B) {
+	makeRun := func(v interface{}, enc func(interface{}) error) func(*testing.B) {
 		return func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				buf.N = 0
-				if err := enc.Fold(v); err != nil {
+				if err := enc(v); err != nil {
 					b.Error(err)
 					return
 				}
@@ -153,23 +154,15 @@ func BenchmarkCompareEncode(b *testing.B) {
 	}
 
 	for i, test := range tests {
+
 		name := fmt.Sprintf("%v (%T)", test.json, test.value)
 		b.Logf("run test (%v): %v", i, name)
 
-		b.Run("ubjson "+name, makeRun(test.value, NewIterator(ubjson.NewVisitor(buf))))
-
-		b.Run("json "+name, makeRun(test.value, NewIterator(json.NewVisitor(buf))))
-
-		b.Run("go-json "+name, func(b *testing.B) {
-			enc := gojson.NewEncoder(buf)
-			for i := 0; i < b.N; i++ {
-				buf.N = 0
-				if err := enc.Encode(test.value); err != nil {
-					b.Error(err)
-					return
-				}
-				b.SetBytes(buf.N)
-			}
-		})
+		b.Run("ubjson "+name, makeRun(test.value, NewIterator(ubjson.NewVisitor(buf)).Fold))
+		b.Run("json "+name, makeRun(test.value, NewIterator(json.NewVisitor(buf)).Fold))
+		b.Run("go-codec-json "+name, makeRun(test.value, codec.NewEncoder(buf, &codec.JsonHandle{}).Encode))
+		b.Run("go-codec-msgpack "+name, makeRun(test.value, codec.NewEncoder(buf, &codec.MsgpackHandle{}).Encode))
+		b.Run("go-codec-cbor "+name, makeRun(test.value, codec.NewEncoder(buf, &codec.CborHandle{}).Encode))
+		b.Run("go-json"+name, makeRun(test.value, gojson.NewEncoder(buf).Encode))
 	}
 }
