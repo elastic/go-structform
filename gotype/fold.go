@@ -3,7 +3,7 @@ package gotype
 import (
 	"reflect"
 
-	structform "github.com/urso/go-structform"
+	"github.com/urso/go-structform"
 )
 
 type foldFn func(c *foldContext, v interface{}) error

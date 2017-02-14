@@ -41,7 +41,10 @@ type lengthStack struct {
 	current int64
 }
 
+//go:generate stringer -type=stateType
 type stateType uint8
+
+//go:generate stringer -type=stateStep
 type stateStep uint8
 
 type state struct {

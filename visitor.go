@@ -13,6 +13,7 @@ type ExtVisitor interface {
 	ObjectValueVisitor
 }
 
+//go:generate stringer -type=BaseType
 type BaseType uint8
 
 const (

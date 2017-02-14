@@ -54,6 +54,7 @@ var (
 
 type state uint8
 
+//go:generate stringer -type=state
 const (
 	failedState state = iota
 	startState
@@ -104,6 +105,10 @@ func NewParser(vs structform.Visitor) *Parser {
 }
 
 func (p *Parser) Parse(b []byte) error {
+	p.states = p.states[:0]
+	p.literalBuffer = p.literalBuffer[:0]
+	p.currentState = startState
+
 	p.err = p.feed(b)
 	if p.err == nil {
 		p.err = p.finalize()

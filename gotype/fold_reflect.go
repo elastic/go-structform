@@ -40,7 +40,7 @@ func getReflectFold(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	case reflect.Slice, reflect.Array:
 		f, err = getReflectFoldSlice(c, t)
 	case reflect.Interface:
-		f = foldAnyReflect
+		f, err = getReflectFoldElem(c, t)
 	default:
 		return nil, errUnsupported
 	}
@@ -119,6 +119,17 @@ func makePointerFold(N int, elemVisitor reFoldFn) reFoldFn {
 		}
 		return elemVisitor(C, v)
 	}
+}
+
+func getReflectFoldElem(c *foldContext, t reflect.Type) (reFoldFn, error) {
+	return foldInterfaceElem, nil
+}
+
+func foldInterfaceElem(C *foldContext, v reflect.Value) error {
+	if v.IsNil() {
+		return C.visitor.OnNil()
+	}
+	return foldAnyReflect(C, v.Elem())
 }
 
 func getReflectFoldStruct(c *foldContext, t reflect.Type, inline bool) (reFoldFn, error) {
