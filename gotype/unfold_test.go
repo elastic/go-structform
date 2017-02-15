@@ -15,7 +15,6 @@ var unfoldSamples = []struct {
 	input interface{}
 	value interface{}
 }{
-
 	// primitives
 	{`null`, nil, new(interface{})},
 	{`""`, nil, new(string)},
@@ -117,7 +116,10 @@ var unfoldSamples = []struct {
 	{`{"a":1}`, map[string]int{"a": 1}, new(interface{})},
 	{`{"a":1}`, map[string]int{"a": 1}, &map[string]interface{}{}},
 	{`{"a":1}`, map[string]int{"a": 1}, &map[string]interface{}{"a": 2}},
+	{`{"a":1}`, map[string]int{"a": 1}, &map[string]int{}},
+	{`{"a":1}`, map[string]int{"a": 1}, &map[string]int{"a": 2}},
 	{`{"a":1}`, struct{ A int }{1}, &map[string]interface{}{}},
+	{`{"a":1}`, struct{ A int }{1}, &map[string]int{}},
 	{`{"a":1,"b":"b","c":true}`,
 		map[string]interface{}{"a": 1, "b": "b", "c": true},
 		new(interface{}),
@@ -197,6 +199,9 @@ var unfoldSamples = []struct {
 		&map[string][]int{}},
 	{`{"a":[1,2],"b":[3,4,5]}`, map[string][]int{"a": {1, 2}, "b": {3, 4, 5}},
 		&map[string][]int{"a": {0, 2}, "b": {0}}},
+
+	// struct
+	// {`{"a":1}`, map[string]int{"a": 1}, &struct{ A int }{}},
 }
 
 func TestFoldUnfoldConsistent(t *testing.T) {

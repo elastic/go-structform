@@ -1,0 +1,39 @@
+data.types: [
+    bool,
+    string,
+    uint, uint8, uint16, uint32, uint64,
+    int, int8, int16, int32, int64,
+    float32, float64
+  ]
+
+main: |
+  package gotype
+  
+  func (u *unfoldCtx) trySetGotypeTarget(to interface{}) bool {
+    switch ptr := to.(type) {
+
+    // primitives
+    {{ range .types }}
+    case *{{ . }}:
+      u.unfolder.push(newUnfolder{{ . | capitalize }}(u, ptr))
+    {{ end }}
+
+    // arrays
+    {{ range .types }}
+    case *[]{{ . }}:
+      u.unfolder.push(newUnfolderArr{{ . | capitalize }}(u, ptr))
+      u.detail.push(unfoldWaitStart)
+    {{ end }}
+
+    // maps
+    {{ range .types }}
+    case *map[string]{{ . }}:
+      u.unfolder.push(newUnfolderMap{{ . | capitalize }}(u, ptr))
+      u.detail.push(unfoldWaitStart)
+    {{ end }}
+
+    default:
+      return false
+    }
+    return true
+  }

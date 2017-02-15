@@ -1,3 +1,4 @@
+// This file has been generated from 'stacks_tmpl.yml', do not edit
 package gotype
 
 import (
@@ -30,6 +31,12 @@ type unfoldStateStack struct {
 	stack0  [32]unfoldState
 }
 
+type unfoldTypeStack struct {
+	current unfoldType
+	stack   []unfoldType
+	stack0  [32]unfoldType
+}
+
 type unfoldStateDetailStack struct {
 	current unfoldStateDetail
 	stack   []unfoldStateDetail
@@ -42,46 +49,51 @@ type structTypeStack struct {
 	stack0  [32]structform.BaseType
 }
 
-func (s *keyStack) init() {
-	s.current = ""
-	s.stack = s.stack[:0]
+type unfolderStack struct {
+	current structform.Visitor
+	stack   []structform.Visitor
+	stack0  [32]structform.Visitor
 }
 
-func (s *keyStack) push(name string) {
+func (s *keyStack) init() {
+	s.current = ""
+	s.stack = s.stack0[:0]
+}
+
+func (s *keyStack) push(v string) {
 	s.stack = append(s.stack, s.current)
-	s.current = name
+	s.current = v
 }
 
 func (s *keyStack) pop() string {
-	name := s.current
+	old := s.current
 	last := len(s.stack) - 1
 	s.current = s.stack[last]
 	s.stack = s.stack[:last]
-	return name
+	return old
 }
 
 func (s *idxStack) init() {
 	s.current = -1
-	s.stack = s.stack[:0]
+	s.stack = s.stack0[:0]
 }
 
-func (s *idxStack) push() {
+func (s *idxStack) push(v int) {
 	s.stack = append(s.stack, s.current)
-	s.current = 0
+	s.current = v
 }
 
 func (s *idxStack) pop() int {
-	name := s.current
+	old := s.current
 	last := len(s.stack) - 1
 	s.current = s.stack[last]
 	s.stack = s.stack[:last]
-	return name
+	return old
 }
 
 func (s *reflectValueStack) init(v reflect.Value) {
 	s.current = v
-	s.stack = s.stack0[:1]
-	s.stack[0] = reflect.Value{}
+	s.stack = s.stack0[:0]
 }
 
 func (s *reflectValueStack) push(v reflect.Value) {
@@ -90,11 +102,11 @@ func (s *reflectValueStack) push(v reflect.Value) {
 }
 
 func (s *reflectValueStack) pop() reflect.Value {
-	v := s.current
+	old := s.current
 	last := len(s.stack) - 1
 	s.current = s.stack[last]
 	s.stack = s.stack[:last]
-	return v
+	return old
 }
 
 func (s *unfoldStateStack) init(v unfoldState) {
@@ -108,11 +120,29 @@ func (s *unfoldStateStack) push(v unfoldState) {
 }
 
 func (s *unfoldStateStack) pop() unfoldState {
-	v := s.current
+	old := s.current
 	last := len(s.stack) - 1
 	s.current = s.stack[last]
 	s.stack = s.stack[:last]
-	return v
+	return old
+}
+
+func (s *unfoldTypeStack) init(v unfoldType) {
+	s.current = v
+	s.stack = s.stack0[:0]
+}
+
+func (s *unfoldTypeStack) push(v unfoldType) {
+	s.stack = append(s.stack, s.current)
+	s.current = v
+}
+
+func (s *unfoldTypeStack) pop() unfoldType {
+	old := s.current
+	last := len(s.stack) - 1
+	s.current = s.stack[last]
+	s.stack = s.stack[:last]
+	return old
 }
 
 func (s *unfoldStateDetailStack) init(v unfoldStateDetail) {
@@ -126,9 +156,45 @@ func (s *unfoldStateDetailStack) push(v unfoldStateDetail) {
 }
 
 func (s *unfoldStateDetailStack) pop() unfoldStateDetail {
-	v := s.current
+	old := s.current
 	last := len(s.stack) - 1
 	s.current = s.stack[last]
 	s.stack = s.stack[:last]
-	return v
+	return old
+}
+
+func (s *structTypeStack) init(v structform.BaseType) {
+	s.current = v
+	s.stack = s.stack0[:0]
+}
+
+func (s *structTypeStack) push(v structform.BaseType) {
+	s.stack = append(s.stack, s.current)
+	s.current = v
+}
+
+func (s *structTypeStack) pop() structform.BaseType {
+	old := s.current
+	last := len(s.stack) - 1
+	s.current = s.stack[last]
+	s.stack = s.stack[:last]
+	return old
+}
+
+func (s *unfolderStack) init(v structform.Visitor) {
+	s.current = v
+	s.stack = s.stack0[:0]
+}
+
+func (s *unfolderStack) push(v structform.Visitor) {
+	s.stack = append(s.stack, s.current)
+	s.current = v
+}
+
+func (s *unfolderStack) pop() structform.Visitor {
+	old := s.current
+	last := len(s.stack) - 1
+	s.current = s.stack[last]
+	s.stack = s.stack[:last]
+	return old
 }

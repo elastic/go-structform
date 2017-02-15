@@ -1,0 +1,87 @@
+import:
+  - unfold_templates.yml
+
+data.numTypes: [
+    uint, uint8, uint16, uint32, uint64,
+    int, int8, int16, int32, int64,
+    float32, float64
+  ]
+
+main: |
+  package gotype
+
+  import "github.com/urso/go-structform"
+
+  {{/* define types */}}
+  {{ template "makeType" "bool" }}
+  {{ template "makeType" "string" }}
+  {{ range .numTypes }}
+    {{ template "makeType" . }}
+  {{ end }}
+
+  {{/* create visitor callbacks */}}
+  {{ invoke "onBool" "name" "unfolderMapBool" "fn" "put" }}
+  {{ invoke "onString" "name" "unfolderMapString" "fn" "put" }}
+  {{ range .numTypes }}
+    {{ $type := . }}
+    {{ $name := capitalize $type | printf "unfolderMap%v" }}
+    {{ invoke "onNumber" "name" $name "type" $type "fn" "put" }}
+  {{ end }}
+
+templates.makeType: |
+  {{ $type := . }}
+  {{ $name := capitalize $type | printf "unfolderMap%v" }}
+  {{ $mapType := $type | printf "map[string]%v" }}
+
+  {{ invoke "makeUnfoldType" "name" $name "type" $mapType }}
+
+  func (u *{{ $name }} ) OnObjectStart(l int, baseType structform.BaseType) error {
+    // TODO: validate baseType
+
+    dtl := &u.ctx.detail
+    if dtl.current != unfoldWaitStart {
+      return errUnexpectedObjectStart
+    }
+
+    dtl.current = unfoldWaitKey
+    return nil
+  }
+
+  func (u *{{ $name }} ) OnObjectFinished() error {
+    dtl := &u.ctx.detail
+    if dtl.current != unfoldWaitKey {
+      return errExpectedObjectKey
+    }
+
+    dtl.pop()
+    u.ctx.unfolder.pop()
+    u.free()
+    return nil
+  }
+
+  func (u *{{ $name }} ) OnKey(key string) error {
+    dtl := &u.ctx.detail
+
+    if dtl.current != unfoldWaitKey {
+      return errUnexpectedObjectKey
+    }
+
+    u.ctx.key.push(key)
+    dtl.current = unfoldWaitElem
+    return nil
+  }
+
+  func (u *{{ $name }} ) put(v {{ $type }}) error {
+    dtl := &u.ctx.detail
+
+    if dtl.current != unfoldWaitElem {
+      return errExpectedObjectKey
+    }
+
+    if *u.to == nil {
+      *u.to = map[string]{{ $type }}{}
+    }
+    (*u.to)[u.ctx.key.pop()] = v
+    dtl.current = unfoldWaitKey
+    return nil
+  }

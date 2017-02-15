@@ -1,0 +1,40 @@
+import:
+  - unfold_templates.yml
+
+data.numTypes: [
+    uint, uint8, uint16, uint32, uint64,
+    int, int8, int16, int32, int64,
+    float32, float64
+  ]
+
+main: |
+  package gotype
+
+  {{/* define types */}}
+  {{ template "makeType" "bool" }}
+  {{ template "makeType" "string" }}
+  {{ range .numTypes }} 
+    {{ template "makeType" . }}
+  {{ end }}
+
+  {{/* create visitor callbacks */}}
+  {{ invoke "onBool" "name" "unfolderBool" "fn" "assign" }}
+  {{ invoke "onString" "name" "unfolderString" "fn" "assign" }}
+  {{ range .numTypes }}
+    {{ $type := . }}
+    {{ $name := capitalize . | printf "unfolder%v" }}
+    {{ invoke "onNumber" "name" $name "type" $type "fn" "assign" }}
+  {{ end }}
+
+
+templates.makeType: |
+  {{ $type := . }}
+  {{ $name := capitalize . | printf "unfolder%v" }}
+  {{ invoke "makeUnfoldType" "type" $type "name" $name }}
+
+  func (u *{{ $name }}) assign(v {{ $type }}) error {
+    *u.to = v
+    u.ctx.unfolder.pop()
+    u.free()
+    return nil
+  }

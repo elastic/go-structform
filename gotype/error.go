@@ -18,6 +18,9 @@ var (
 	errStartObjectWaitingForKey = errors.New("start object while waiting for object field name")
 	errExpectedArrayNotObject   = errors.New("expected array but received object")
 	errExpectedObjectNotArray   = errors.New("expected object but received array")
+	errUnexpectedArrayStart     = errors.New("unexpected array start")
+	errUnexpectedObjectStart    = errors.New("unexpected object start")
+	errExpectedObjectKey        = errors.New("waiting for object key or object end marker")
 )
 
 func errTODO() error {

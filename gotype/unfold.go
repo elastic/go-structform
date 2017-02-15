@@ -1,21 +1,29 @@
 package gotype
 
 import (
-	"fmt"
 	"reflect"
 
 	structform "github.com/urso/go-structform"
 )
 
 type Unfolder struct {
-	depth int
-	opts  options
+	unfoldCtx
+}
 
+type unfoldCtx struct {
+	opts options
+
+	// function stacks
+	// sel unfoldTypeStack
+
+	// reflection state stacks
 	value  reflectValueStack
 	key    keyStack
 	idx    idxStack
 	state  unfoldStateStack
 	detail unfoldStateDetailStack
+
+	unfolder unfolderStack
 }
 
 // unfold state used to handled next value
@@ -23,12 +31,14 @@ type unfoldState uint8
 
 type unfoldStateDetail uint8
 
+type unfoldType uint8
+
 func println(v ...interface{}) {
-	fmt.Println(v...)
+	// fmt.Println(v...)
 }
 
 func printf(s string, v ...interface{}) {
-	fmt.Printf(s+"\n", v...)
+	// fmt.Printf(s+"\n", v...)
 }
 
 //go:generate stringer -type=unfoldState
@@ -68,11 +78,11 @@ var (
 )
 
 func NewUnfolder(to interface{}) (*Unfolder, error) {
-	u := &Unfolder{
-		opts: options{
-			tag: "struct",
-		},
+	u := &Unfolder{}
+	u.opts = options{
+		tag: "struct",
 	}
+
 	if err := u.setTarget(to); err != nil {
 		return nil, err
 	}
@@ -82,6 +92,10 @@ func NewUnfolder(to interface{}) (*Unfolder, error) {
 func (u *Unfolder) setTarget(to interface{}) error {
 	if to == nil {
 		return errNilInput
+	}
+
+	if u.trySetGotypeTarget(to) {
+		return nil
 	}
 
 	vTo := reflect.ValueOf(to)
@@ -120,7 +134,7 @@ func (u *Unfolder) setTarget(to interface{}) error {
 	}
 
 	// init processing stacks
-	u.value.init(vTo)
+	u.value.init(reflect.Value{})
 	u.key.init()
 	u.idx.init()
 	u.state.init(unfoldStartState)
@@ -128,448 +142,101 @@ func (u *Unfolder) setTarget(to interface{}) error {
 	u.detail.init(unfoldWaitElem)
 	u.detail.push(detail0)
 
+	u.unfolder.init(newUnfolderRefl(&u.unfoldCtx))
+	u.value.push(vTo)
+
+	// u.unfoldCtx.setUnfoldGoTypes(to)
+
 	return nil
 }
 
-func (u *Unfolder) OnObjectStart(len int, baseType structform.BaseType) error {
-	println("OnObjectStart:")
-	printStacks(u)
-	defer func() {
-		println("  -> OnObjectStart")
-		printStacks(u)
-	}()
+func (u *unfoldCtx) OnObjectStart(len int, baseType structform.BaseType) error {
+	return u.unfolder.current.OnObjectStart(len, baseType)
+}
 
-	st, dtl, v := &u.state, &u.detail, &u.value
+func (u *unfoldCtx) OnObjectFinished() error {
+	return u.unfolder.current.OnObjectFinished()
+}
 
-	if dtl.current == unfoldWaitKey {
-		return errStartObjectWaitingForKey
-	}
+func (u *unfoldCtx) OnKey(s string) error {
+	return u.unfolder.current.OnKey(s)
+}
 
-	switch st.current {
-	case unfoldAssignState:
-		st.push(unfoldMapState)
-		dtl.push(unfoldWaitKey)
+func (u *unfoldCtx) OnArrayStart(len int, baseType structform.BaseType) error {
+	return u.unfolder.current.OnArrayStart(len, baseType)
+}
 
-		v.push(makeMap(baseType))
-		return nil
+func (u *unfoldCtx) OnArrayFinished() error {
+	return u.unfolder.current.OnArrayFinished()
+}
 
-	case unfoldMapState:
-		if dtl.current == unfoldWaitStart {
-			// we did wait for 'OnObjectStart' for already scheduled map/struct
-			// let's advance state and initialize key stack
-			dtl.current = unfoldWaitKey
-			return nil
-		}
+func (u *unfoldCtx) OnNil() error {
+	return u.unfolder.current.OnNil()
+}
 
-		break
+func (u *unfoldCtx) OnBool(b bool) error {
+	return u.unfolder.current.OnBool(b)
+}
 
-	case unfoldArrayState:
-		if dtl.current == unfoldWaitStart {
-			return errExpectedArrayNotObject
-		}
+func (u *unfoldCtx) OnString(s string) error {
+	return u.unfolder.current.OnString(s)
+}
 
-		break
+func (u *unfoldCtx) OnInt8(i int8) error {
+	return u.unfolder.current.OnInt8(i)
+}
 
+func (u *unfoldCtx) OnInt16(i int16) error {
+	return u.unfolder.current.OnInt16(i)
+}
+
+func (u *unfoldCtx) OnInt32(i int32) error {
+	return u.unfolder.current.OnInt32(i)
+}
+
+func (u *unfoldCtx) OnInt64(i int64) error {
+	return u.unfolder.current.OnInt64(i)
+}
+
+func (u *unfoldCtx) OnInt(i int) error {
+	return u.unfolder.current.OnInt(i)
+}
+
+func (u *unfoldCtx) OnByte(b byte) error {
+	return u.unfolder.current.OnByte(b)
+}
+
+func (u *unfoldCtx) OnUint8(v uint8) error {
+	return u.unfolder.current.OnUint8(v)
+}
+
+func (u *unfoldCtx) OnUint16(v uint16) error {
+	return u.unfolder.current.OnUint16(v)
+}
+
+func (u *unfoldCtx) OnUint32(v uint32) error {
+	return u.unfolder.current.OnUint32(v)
+}
+
+func (u *unfoldCtx) OnUint64(v uint64) error {
+	return u.unfolder.current.OnUint64(v)
+}
+
+func (u *unfoldCtx) OnUint(v uint) error {
+	return u.unfolder.current.OnUint(v)
+}
+
+func (u *unfoldCtx) OnFloat32(f float32) error {
+	return u.unfolder.current.OnFloat32(f)
+}
+
+func (u *unfoldCtx) OnFloat64(f float64) error {
+	return u.unfolder.current.OnFloat64(f)
+}
+
+func (u *unfoldCtx) setUnfoldGoTypes(v interface{}) {
+	switch v.(type) {
 	default:
-		println("state: ", st.current)
-		return errTODO()
 	}
 
-	// start new object to be inserted into current array/map
-	println("  current state: ", st.current)
-	println("  current type: ", v.current.Type())
-	println("    kind: ", v.current.Kind())
-	println("    elem type: ", v.current.Type().Elem())
-
-	st.push(unfoldMapState)
-	dtl.push(unfoldWaitKey)
-
-	if v.current.Type().Elem() == tInterface {
-		v.push(makeMap(baseType))
-	} else {
-		v.push(makeGoMap(v.current.Type().Elem().Elem()))
-	}
-	return nil
-
-}
-
-func (u *Unfolder) OnObjectFinished() error {
-	println("OnObjectFinished:")
-	printStacks(u)
-	defer func() {
-		println("  -> OnObjectFinished")
-		printStacks(u)
-	}()
-
-	st, dtl, v := &u.state, &u.detail, &u.value
-
-	// scheduled waiting for new sub-object or assignment to nested interface, but
-	// received finished signal for parent object -> drop state waiting for start of
-	// nested object
-	waitAssigned := (dtl.current == unfoldWaitStart &&
-		(st.current == unfoldMapState || st.current == unfoldStructState)) ||
-		(st.current == unfoldAssignState && dtl.current == unfoldWaitElem)
-	if waitAssigned {
-		st.pop()
-		dtl.pop()
-		v.pop()
-	}
-
-	dtl.pop()
-	st.pop()
-	value := v.pop()
-	return u.onValue(value)
-}
-
-func (u *Unfolder) OnKey(s string) error {
-	st, dtl := &u.state, &u.detail
-
-	println("OnKey: ", s)
-
-	if dtl.current != unfoldWaitKey {
-		return errUnexpectedObjectKey
-	}
-
-	switch st.current {
-	case unfoldMapState:
-		return u.onMapKey(s)
-	case unfoldStructState:
-		return u.onStructKey(s)
-	default:
-		return errTODO()
-	}
-}
-
-func (u *Unfolder) onMapKey(key string) error {
-	dtl, v := &u.detail, &u.value
-
-	u.key.push(key)
-	dtl.current = unfoldWaitElem
-	elem := chaseValue(v.current.MapIndex(reflect.ValueOf(key)))
-	println("  map element: ", elem)
-	u.tryAssignElem(elem)
-	return nil
-}
-
-func (u *Unfolder) onStructKey(key string) error {
-	return errTODO()
-}
-
-func (u *Unfolder) OnArrayStart(len int, baseType structform.BaseType) error {
-	println("OnArrayStart:")
-	printStacks(u)
-	defer func() {
-		println("  -> OnArrayStart")
-		printStacks(u)
-	}()
-
-	st, dtl, idx, v := &u.state, &u.detail, &u.idx, &u.value
-
-	if dtl.current == unfoldWaitKey {
-		return errStartArrayWaitingForKey
-	}
-
-	switch st.current {
-	case unfoldAssignState:
-		// check type of new array:
-		println("  current state: ", st.current)
-		println("  current type: ", v.current.Type())
-		println("    kind: ", v.current.Kind())
-
-		st.push(unfoldArrayState)
-		dtl.push(unfoldWaitElem)
-		idx.push()
-
-		v.push(makeArray(len, baseType))
-		// v.push(makeSlice(len, v.current.Type().Elem().Elem()))
-		return nil
-
-	case unfoldArrayState:
-		if dtl.current == unfoldWaitStart {
-			// we did wait for 'OnArrayStart' for already scheduled array
-			// let's advance state and initialize array index stack
-			dtl.current = unfoldWaitElem
-			idx.push()
-			u.tryArrayAssign()
-			return nil
-		}
-		break
-
-	case unfoldMapState:
-		if dtl.current == unfoldWaitStart {
-			return errExpectedObjectNotArray
-		}
-		break
-
-	default:
-		return errTODO()
-	}
-
-	// start new array to be inserted into current map/array
-	println("  current state: ", st.current)
-	println("  current type: ", v.current.Type())
-	println("    kind: ", v.current.Kind())
-	println("    elem type: ", v.current.Type().Elem())
-
-	st.push(unfoldArrayState)
-	dtl.push(unfoldWaitElem)
-	idx.push()
-
-	if v.current.Type().Elem() == tInterface {
-		v.push(makeArray(len, baseType))
-	} else {
-		v.push(makeSlice(len, v.current.Type().Elem().Elem()))
-	}
-	return nil
-
-}
-
-// tryArrayAssign checks if value on stack has some element to be overwritten.
-// If so, it does push the value on the processing stack waiting for the
-// assignment to happen (not, OnArrayFinished might be received on input stream and
-// cleanup stacks in this case).
-func (u *Unfolder) tryArrayAssign() {
-	idx, v := &u.idx, &u.value
-
-	if v.current.Len() > idx.current {
-		elem := chaseValue(v.current.Index(idx.current))
-		printf("  value at index %v: %v", idx.current, elem)
-		u.tryAssignElem(elem)
-	}
-}
-
-func (u *Unfolder) tryAssignElem(elem reflect.Value) {
-	st, dtl, v := &u.state, &u.detail, &u.value
-
-	println("  try to assign kind: ", elem.Kind())
-
-	switch elem.Kind() {
-	case reflect.Slice, reflect.Array:
-		if !elem.IsNil() {
-			st.push(unfoldArrayState)
-			dtl.push(unfoldWaitStart)
-			v.push(elem)
-		}
-
-	case reflect.Map:
-		println("try assign map")
-		if !elem.IsNil() {
-			st.push(unfoldMapState)
-			dtl.push(unfoldWaitStart)
-			v.push(elem)
-		}
-
-	case reflect.Struct:
-		errTODO()
-
-	case reflect.Interface:
-		if !elem.IsNil() && elem.CanSet() {
-			st.push(unfoldAssignState)
-			dtl.push(unfoldWaitElem)
-			v.push(elem)
-		}
-	}
-}
-
-func (u *Unfolder) OnArrayFinished() error {
-
-	st, dtl, idx, v := &u.state, &u.detail, &u.idx, &u.value
-
-	// scheduled waiting for new sub-array or assignment to nested interface, but
-	// received finished signal for parent array -> drop state waiting for start of
-	// nested array
-	waitAssigned := (st.current == unfoldArrayState && dtl.current == unfoldWaitStart) ||
-		(st.current == unfoldAssignState && dtl.current == unfoldWaitElem)
-	if waitAssigned {
-		st.pop()
-		dtl.pop()
-		v.pop()
-	}
-
-	dtl.pop()
-	idx.pop()
-	st.pop()
-	value := v.pop()
-	return u.onValue(value)
-
-	// return errTODO()
-}
-
-func makeArray(len int, baseType structform.BaseType) reflect.Value {
-	return makeSlice(len, lookupGoType(baseType))
-}
-
-func makeSlice(len int, t reflect.Type) reflect.Value {
-	st := reflect.SliceOf(t)
-	if len < 0 {
-		return reflect.New(st).Elem()
-	}
-	return reflect.MakeSlice(st, len, len)
-}
-
-func makeMap(baseType structform.BaseType) reflect.Value {
-	return makeGoMap(lookupGoType(baseType))
-}
-
-func makeGoMap(t reflect.Type) reflect.Value {
-	mt := reflect.MapOf(tString, t)
-	println("  make map: ", mt)
-	return reflect.MakeMap(mt)
-}
-
-func (u *Unfolder) onValue(v reflect.Value) error {
-	println("onValue: ", v)
-	printStacks(u)
-
-	defer func() {
-		println("  ->onValue")
-		printStacks(u)
-	}()
-
-	switch u.state.current {
-	case unfoldInvalidState:
-		return errInvalidState
-	case unfoldStartState:
-		return nil
-	case unfoldArrayState:
-		return u.intoArray(v)
-	case unfoldMapState:
-		return u.intoMap(v)
-	case unfoldStructState:
-		return errTODO()
-	case unfoldAssignState:
-		u.state.pop()
-		return u.assignValue(v)
-	}
-	return nil
-}
-
-func (u *Unfolder) assignValue(v reflect.Value) error {
-	// try to merge v into u.value.current
-
-	value := u.value.current
-	if !v.IsValid() {
-		value.Set(reflect.Zero(value.Type()))
-		return nil
-	}
-
-	if !v.Type().ConvertibleTo(value.Type()) {
-		return errIncompatibleTypes
-	}
-
-	value.Set(v.Convert(value.Type()))
-	return nil
-}
-
-func (u *Unfolder) intoMap(v reflect.Value) error {
-	dtl, val, key := &u.detail, &u.value, &u.key
-	tElem := val.current.Type().Elem()
-
-	switch {
-	case v == invalidValue:
-		v = reflect.Zero(tElem)
-
-	case tElem.Kind() == reflect.Ptr:
-		bt := chaseTypePointers(tElem)
-		v = pointerize(tElem, bt, v.Convert(bt))
-
-	default:
-		v = v.Convert(tElem)
-	}
-
-	k := reflect.ValueOf(key.pop())
-	val.current.SetMapIndex(k, v)
-	dtl.current = unfoldWaitKey
-	return nil
-}
-
-func (u *Unfolder) intoStruct(v reflect.Value) error {
-	return errTODO()
-}
-
-func (u *Unfolder) intoArray(v reflect.Value) error {
-	val, idx := &u.value, &u.idx
-	tElem := val.current.Type().Elem()
-
-	switch {
-	case v == invalidValue:
-		v = reflect.Zero(tElem)
-
-	case tElem.Kind() == reflect.Ptr:
-		bt := chaseTypePointers(tElem)
-		v = pointerize(tElem, bt, v.Convert(bt))
-
-	default:
-		v = v.Convert(tElem)
-	}
-
-	if val.current.Len() <= idx.current {
-		// use append
-		println("  append value")
-		if !val.current.CanSet() {
-			tmp := makeSlice(val.current.Len()+1, val.current.Type().Elem())
-			reflect.Copy(tmp, val.current)
-			val.current = tmp
-
-			elem := val.current.Index(idx.current)
-			elem.Set(v)
-		} else {
-			val.current.Set(reflect.Append(val.current, v))
-		}
-	} else {
-		println("  assign array value")
-		elem := val.current.Index(idx.current)
-		elem.Set(v)
-	}
-	idx.current++
-
-	u.tryArrayAssign()
-	return nil
-}
-
-func lookupGoType(b structform.BaseType) reflect.Type {
-	switch b {
-	case structform.ByteType:
-		return tByte
-	case structform.StringType:
-		return tString
-	case structform.BoolType:
-		return tBool
-	case structform.IntType:
-		return tInt
-	case structform.Int8Type:
-		return tInt8
-	case structform.Int16Type:
-		return tInt16
-	case structform.Int32Type:
-		return tInt32
-	case structform.Int64Type:
-		return tInt64
-	case structform.UintType:
-		return tUint
-	case structform.Uint8Type:
-		return tUint8
-	case structform.Uint16Type:
-		return tUint16
-	case structform.Uint32Type:
-		return tUint32
-	case structform.Uint64Type:
-		return tUint64
-	case structform.Float32Type:
-		return tFloat32
-	case structform.Float64Type:
-		return tFloat64
-	default:
-		return tInterface
-	}
-
-}
-
-func printStacks(u *Unfolder) {
-	println("  stacks:")
-	println("    state: ", u.state.stack, u.state.current)
-	println("    detail: ", u.detail.stack, u.detail.current)
-	println("    value: ", u.value.stack, u.value.current)
-	println("    key: ", u.key.stack, u.key.current)
-	println("    idx: ", u.idx.stack, u.idx.current)
 }

@@ -1,0 +1,73 @@
+import:
+  - unfold_templates.yml
+
+data.types: [
+    uint, uint8, uint16, uint32, uint64,
+    int, int8, int16, int32, int64,
+    float32, float64
+  ]
+
+main: |
+  package gotype
+
+  import "github.com/urso/go-structform"
+
+  {{/* define types */}}
+  {{ template "makeType" "bool" }}
+  {{ template "makeType" "string" }}
+  {{ range .types }}
+    {{ template "makeType" . }}
+  {{ end }}
+
+  {{/* create visitor callbacks */}}
+  {{ invoke "onBool" "name" "unfolderArrBool" "fn" "append" }}
+  {{ invoke "onString" "name" "unfolderArrString" "fn" "append" }}
+  {{ range .types }}
+    {{ $type := . }}
+    {{ $name := capitalize $type | printf "unfolderArr%v" }}
+    {{ invoke "onNumber" "name" $name "type" $type "fn" "append" }}
+  {{ end }}
+
+templates.makeType: |
+  {{ $type := . }}
+  {{ $name := capitalize $type | printf "unfolderArr%v" }}
+  {{ $arrType := $type | printf "[]%v" }}
+
+  {{ invoke "makeUnfoldType" "name" $name "type" $arrType }}
+
+  func (u *{{ $name }} ) OnArrayStart(l int, baseType structform.BaseType) error {
+    // TODO: validate baseType
+
+    dtl := &u.ctx.detail
+    if dtl.current != unfoldWaitStart {
+      return errUnexpectedArrayStart
+    }
+
+    if l > 0 && *u.to == nil {
+      *u.to = make([]{{ $type }}, l)
+    }
+
+    dtl.current = unfoldWaitElem
+    u.ctx.idx.push(0)
+    return nil
+  }
+
+  func (u *{{ $name }} ) OnArrayFinished() error {
+    u.ctx.idx.pop()
+    u.ctx.detail.pop()
+    u.ctx.unfolder.pop()
+    u.free()
+    return nil
+  }
+
+  func (u *{{ $name }} ) append(v {{ $type }}) error {
+    idx := &u.ctx.idx
+    if len(*u.to) <= idx.current {
+      *u.to = append(*u.to, v)
+    } else {
+      (*u.to)[idx.current] = v
+    }
+    idx.current++
+    return nil
+  }
+
