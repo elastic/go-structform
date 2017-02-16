@@ -16,7 +16,10 @@ data:
 - name: structTypeStack
   type: structform.BaseType
 - name: unfolderStack
-  type: structform.Visitor
+  type: unfolder
+- name: ptrStack
+  init: 'nil'
+  type: unsafe.Pointer
 
 main: |
   package gotype

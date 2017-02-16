@@ -35,39 +35,45 @@ templates.makeType: |
 
   {{ invoke "makeUnfoldType" "name" $name "type" $arrType }}
 
-  func (u *{{ $name }} ) OnArrayStart(l int, baseType structform.BaseType) error {
+  func (u *{{ $name }} ) OnArrayStart(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
     // TODO: validate baseType
 
-    dtl := &u.ctx.detail
+    dtl := &ctx.detail
     if dtl.current != unfoldWaitStart {
       return errUnexpectedArrayStart
     }
 
-    if l > 0 && *u.to == nil {
-      *u.to = make([]{{ $type }}, l)
+    if l > 0 {
+      to := (*[]{{ $type }})(ctx.ptr.current)
+      if *to == nil {
+        *to = make([]{{ $type }}, l)
+      }
     }
 
     dtl.current = unfoldWaitElem
-    u.ctx.idx.push(0)
+    ctx.idx.push(0)
     return nil
   }
 
-  func (u *{{ $name }} ) OnArrayFinished() error {
-    u.ctx.idx.pop()
-    u.ctx.detail.pop()
-    u.ctx.unfolder.pop()
+  func (u *{{ $name }} ) OnArrayFinished(ctx *unfoldCtx) error {
     u.free()
+
+    ctx.idx.pop()
+    ctx.detail.pop()
+    ctx.unfolder.pop()
+    ctx.ptr.pop()
     return nil
   }
 
-  func (u *{{ $name }} ) append(v {{ $type }}) error {
-    idx := &u.ctx.idx
-    if len(*u.to) <= idx.current {
-      *u.to = append(*u.to, v)
+  func (u *{{ $name }} ) append(ctx *unfoldCtx, v {{ $type }}) error {
+    idx := &ctx.idx
+    to := (*[]{{ $type }})(ctx.ptr.current)
+
+    if len(*to) <= idx.current {
+      *to = append(*to, v)
     } else {
-      (*u.to)[idx.current] = v
+      (*to)[idx.current] = v
     }
     idx.current++
     return nil
   }
-

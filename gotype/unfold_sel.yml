@@ -15,21 +15,24 @@ main: |
     // primitives
     {{ range .types }}
     case *{{ . }}:
-      u.unfolder.push(newUnfolder{{ . | capitalize }}(u, ptr))
+      u.ptr.push(unsafe.Pointer(ptr))
+      u.unfolder.push(newUnfolder{{ . | capitalize }}())
     {{ end }}
 
     // arrays
     {{ range .types }}
     case *[]{{ . }}:
-      u.unfolder.push(newUnfolderArr{{ . | capitalize }}(u, ptr))
+      u.ptr.push(unsafe.Pointer(ptr))
       u.detail.push(unfoldWaitStart)
+      u.unfolder.push(newUnfolderArr{{ . | capitalize }}())
     {{ end }}
 
     // maps
     {{ range .types }}
     case *map[string]{{ . }}:
-      u.unfolder.push(newUnfolderMap{{ . | capitalize }}(u, ptr))
+      u.ptr.push(unsafe.Pointer(ptr))
       u.detail.push(unfoldWaitStart)
+      u.unfolder.push(newUnfolderMap{{ . | capitalize }}())
     {{ end }}
 
     default:

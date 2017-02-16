@@ -7,7 +7,6 @@ import (
 )
 
 type unfolderRefl struct {
-	*unfoldCtx
 }
 
 var (
@@ -16,19 +15,21 @@ var (
 	falseValue   = reflect.ValueOf(false)
 )
 
-func newUnfolderRefl(ctx *unfoldCtx) *unfolderRefl {
-	return &unfolderRefl{ctx}
+var singletionUnfolderRefl = &unfolderRefl{}
+
+func newUnfolderRefl() *unfolderRefl {
+	return singletionUnfolderRefl
 }
 
-func (u unfolderRefl) OnObjectStart(len int, baseType structform.BaseType) error {
+func (unfolderRefl) OnObjectStart(ctx *unfoldCtx, len int, baseType structform.BaseType) error {
 	println("OnObjectStart:")
-	u.printStacks()
+	ctx.printStacks()
 	defer func() {
 		println("  -> OnObjectStart")
-		u.printStacks()
+		ctx.printStacks()
 	}()
 
-	st, dtl, v := &u.state, &u.detail, &u.value
+	st, dtl, v := &ctx.state, &ctx.detail, &ctx.value
 
 	if dtl.current == unfoldWaitKey {
 		return errStartObjectWaitingForKey
@@ -82,15 +83,15 @@ func (u unfolderRefl) OnObjectStart(len int, baseType structform.BaseType) error
 
 }
 
-func (u unfolderRefl) OnObjectFinished() error {
+func (u unfolderRefl) OnObjectFinished(ctx *unfoldCtx) error {
 	println("OnObjectFinished:")
-	u.printStacks()
+	ctx.printStacks()
 	defer func() {
 		println("  -> OnObjectFinished")
-		u.printStacks()
+		ctx.printStacks()
 	}()
 
-	st, dtl, v := &u.state, &u.detail, &u.value
+	st, dtl, v := &ctx.state, &ctx.detail, &ctx.value
 
 	// scheduled waiting for new sub-object or assignment to nested interface, but
 	// received finished signal for parent object -> drop state waiting for start of
@@ -107,11 +108,11 @@ func (u unfolderRefl) OnObjectFinished() error {
 	dtl.pop()
 	st.pop()
 	value := v.pop()
-	return u.onValue(value)
+	return u.onValue(ctx, value)
 }
 
-func (u unfolderRefl) OnKey(s string) error {
-	st, dtl := &u.state, &u.detail
+func (u unfolderRefl) OnKey(ctx *unfoldCtx, s string) error {
+	st, dtl := &ctx.state, &ctx.detail
 
 	println("OnKey: ", s)
 
@@ -121,38 +122,38 @@ func (u unfolderRefl) OnKey(s string) error {
 
 	switch st.current {
 	case unfoldMapState:
-		return u.onMapKey(s)
+		return u.onMapKey(ctx, s)
 	case unfoldStructState:
-		return u.onStructKey(s)
+		return u.onStructKey(ctx, s)
 	default:
 		return errTODO()
 	}
 }
 
-func (u unfolderRefl) onMapKey(key string) error {
-	dtl, v := &u.detail, &u.value
+func (u unfolderRefl) onMapKey(ctx *unfoldCtx, key string) error {
+	dtl, v := &ctx.detail, &ctx.value
 
-	u.key.push(key)
+	ctx.key.push(key)
 	dtl.current = unfoldWaitElem
 	elem := chaseValue(v.current.MapIndex(reflect.ValueOf(key)))
 	println("  map element: ", elem)
-	u.tryAssignElem(elem)
+	u.tryAssignElem(ctx, elem)
 	return nil
 }
 
-func (u unfolderRefl) onStructKey(key string) error {
+func (u unfolderRefl) onStructKey(ctx *unfoldCtx, key string) error {
 	return errTODO()
 }
 
-func (u unfolderRefl) OnArrayStart(len int, baseType structform.BaseType) error {
+func (u unfolderRefl) OnArrayStart(ctx *unfoldCtx, len int, baseType structform.BaseType) error {
 	println("OnArrayStart:")
-	u.printStacks()
+	ctx.printStacks()
 	defer func() {
 		println("  -> OnArrayStart")
-		u.printStacks()
+		ctx.printStacks()
 	}()
 
-	st, dtl, idx, v := &u.state, &u.detail, &u.idx, &u.value
+	st, dtl, idx, v := &ctx.state, &ctx.detail, &ctx.idx, &ctx.value
 
 	if dtl.current == unfoldWaitKey {
 		return errStartArrayWaitingForKey
@@ -179,7 +180,7 @@ func (u unfolderRefl) OnArrayStart(len int, baseType structform.BaseType) error 
 			// let's advance state and initialize array index stack
 			dtl.current = unfoldWaitElem
 			idx.push(0)
-			u.tryArrayAssign()
+			u.tryArrayAssign(ctx)
 			return nil
 		}
 		break
@@ -217,18 +218,18 @@ func (u unfolderRefl) OnArrayStart(len int, baseType structform.BaseType) error 
 // If so, it does push the value on the processing stack waiting for the
 // assignment to happen (not, OnArrayFinished might be received on input stream and
 // cleanup stacks in this case).
-func (u unfolderRefl) tryArrayAssign() {
-	idx, v := &u.idx, &u.value
+func (u unfolderRefl) tryArrayAssign(ctx *unfoldCtx) {
+	idx, v := &ctx.idx, &ctx.value
 
 	if v.current.Len() > idx.current {
 		elem := chaseValue(v.current.Index(idx.current))
 		printf("  value at index %v: %v", idx.current, elem)
-		u.tryAssignElem(elem)
+		u.tryAssignElem(ctx, elem)
 	}
 }
 
-func (u unfolderRefl) tryAssignElem(elem reflect.Value) {
-	st, dtl, v := &u.state, &u.detail, &u.value
+func (u unfolderRefl) tryAssignElem(ctx *unfoldCtx, elem reflect.Value) {
+	st, dtl, v := &ctx.state, &ctx.detail, &ctx.value
 
 	println("  try to assign kind: ", elem.Kind())
 
@@ -260,9 +261,9 @@ func (u unfolderRefl) tryAssignElem(elem reflect.Value) {
 	}
 }
 
-func (u unfolderRefl) OnArrayFinished() error {
+func (u unfolderRefl) OnArrayFinished(ctx *unfoldCtx) error {
 
-	st, dtl, idx, v := &u.state, &u.detail, &u.idx, &u.value
+	st, dtl, idx, v := &ctx.state, &ctx.detail, &ctx.idx, &ctx.value
 
 	// scheduled waiting for new sub-array or assignment to nested interface, but
 	// received finished signal for parent array -> drop state waiting for start of
@@ -279,65 +280,49 @@ func (u unfolderRefl) OnArrayFinished() error {
 	idx.pop()
 	st.pop()
 	value := v.pop()
-	return u.onValue(value)
+	return u.onValue(ctx, value)
 
 	// return errTODO()
 }
 
-func (u unfolderRefl) OnBool(v bool) error {
+func (u unfolderRefl) OnBool(ctx *unfoldCtx, v bool) error {
 	if v == true {
-		return u.onValue(trueValue)
+		return u.onValue(ctx, trueValue)
 	}
-	return u.onValue(falseValue)
+	return u.onValue(ctx, falseValue)
 }
 
-func (u unfolderRefl) OnNil() error              { return u.onValue(invalidValue) }
-func (u unfolderRefl) OnString(v string) error   { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnInt8(v int8) error       { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnInt16(v int16) error     { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnInt32(v int32) error     { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnInt64(v int64) error     { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnInt(v int) error         { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnByte(v byte) error       { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnUint8(v uint8) error     { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnUint16(v uint16) error   { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnUint32(v uint32) error   { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnUint64(v uint64) error   { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnUint(v uint) error       { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnFloat32(v float32) error { return u.onValue(reflect.ValueOf(v)) }
-func (u unfolderRefl) OnFloat64(v float64) error { return u.onValue(reflect.ValueOf(v)) }
-
-func (u unfolderRefl) onValue(v reflect.Value) error {
+func (u unfolderRefl) onValue(ctx *unfoldCtx, v reflect.Value) error {
 	println("onValue: ", v)
-	u.printStacks()
+	ctx.printStacks()
 
 	defer func() {
 		println("  ->onValue")
-		u.printStacks()
+		ctx.printStacks()
 	}()
 
-	switch u.state.current {
+	switch ctx.state.current {
 	case unfoldInvalidState:
 		return errInvalidState
 	case unfoldStartState:
 		return nil
 	case unfoldArrayState:
-		return u.intoArray(v)
+		return u.intoArray(ctx, v)
 	case unfoldMapState:
-		return u.intoMap(v)
+		return u.intoMap(ctx, v)
 	case unfoldStructState:
 		return errTODO()
 	case unfoldAssignState:
-		u.state.pop()
-		return u.assignValue(v)
+		ctx.state.pop()
+		return u.assignValue(ctx, v)
 	}
 	return nil
 }
 
-func (u unfolderRefl) assignValue(v reflect.Value) error {
+func (u unfolderRefl) assignValue(ctx *unfoldCtx, v reflect.Value) error {
 	// try to merge v into u.value.current
 
-	value := u.value.current
+	value := ctx.value.current
 	if !v.IsValid() {
 		value.Set(reflect.Zero(value.Type()))
 		return nil
@@ -354,8 +339,8 @@ func (u unfolderRefl) assignValue(v reflect.Value) error {
 	return nil
 }
 
-func (u unfolderRefl) intoMap(v reflect.Value) error {
-	dtl, val, key := &u.detail, &u.value, &u.key
+func (u unfolderRefl) intoMap(ctx *unfoldCtx, v reflect.Value) error {
+	dtl, val, key := &ctx.detail, &ctx.value, &ctx.key
 	tElem := val.current.Type().Elem()
 
 	switch {
@@ -376,12 +361,12 @@ func (u unfolderRefl) intoMap(v reflect.Value) error {
 	return nil
 }
 
-func (u unfolderRefl) intoStruct(v reflect.Value) error {
+func (u unfolderRefl) intoStruct(ctx *unfoldCtx, v reflect.Value) error {
 	return errTODO()
 }
 
-func (u unfolderRefl) intoArray(v reflect.Value) error {
-	val, idx := &u.value, &u.idx
+func (u unfolderRefl) intoArray(ctx *unfoldCtx, v reflect.Value) error {
+	val, idx := &ctx.value, &ctx.idx
 	tElem := val.current.Type().Elem()
 
 	switch {
@@ -416,8 +401,68 @@ func (u unfolderRefl) intoArray(v reflect.Value) error {
 	}
 	idx.current++
 
-	u.tryArrayAssign()
+	u.tryArrayAssign(ctx)
 	return nil
+}
+
+func (u unfolderRefl) OnNil(ctx *unfoldCtx) error {
+	return u.onValue(ctx, invalidValue)
+}
+
+func (u unfolderRefl) OnString(ctx *unfoldCtx, v string) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnInt8(ctx *unfoldCtx, v int8) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnInt16(ctx *unfoldCtx, v int16) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnInt32(ctx *unfoldCtx, v int32) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnInt64(ctx *unfoldCtx, v int64) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnInt(ctx *unfoldCtx, v int) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnByte(ctx *unfoldCtx, v byte) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnUint8(ctx *unfoldCtx, v uint8) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnUint16(ctx *unfoldCtx, v uint16) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnUint32(ctx *unfoldCtx, v uint32) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnUint64(ctx *unfoldCtx, v uint64) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnUint(ctx *unfoldCtx, v uint) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnFloat32(ctx *unfoldCtx, v float32) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
+}
+
+func (u unfolderRefl) OnFloat64(ctx *unfoldCtx, v float64) error {
+	return u.onValue(ctx, reflect.ValueOf(v))
 }
 
 func makeMap(baseType structform.BaseType) reflect.Value {

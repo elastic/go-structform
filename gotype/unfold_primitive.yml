@@ -32,9 +32,14 @@ templates.makeType: |
   {{ $name := capitalize . | printf "unfolder%v" }}
   {{ invoke "makeUnfoldType" "type" $type "name" $name }}
 
-  func (u *{{ $name }}) assign(v {{ $type }}) error {
-    *u.to = v
-    u.ctx.unfolder.pop()
+  func (u *{{ $name }}) assign(ctx *unfoldCtx, v {{ $type }}) error {
+    // *u.to = v
     u.free()
+
+    to := (*{{ $type }})(ctx.ptr.current)
+    *to = v
+
+    ctx.unfolder.pop()
+    ctx.ptr.pop()
     return nil
   }

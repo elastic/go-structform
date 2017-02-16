@@ -4,49 +4,81 @@ templates.makeUnfoldType: |
 
   type {{ $name }} struct {
     reUnfoldEmpty
-    ctx *unfoldCtx
-    to *{{ $type }}
   }
 
+  /*
   var {{ $name }}Pool = sync.Pool{
     New: func() interface{} {
       return &{{ $name }}{}
     },
   }
+  */
 
-  func new{{ $name | capitalize }}(ctx *unfoldCtx, to *{{ $type }}) *{{ $name }} {
-    u := {{ $name }}Pool.Get().(*{{ $name }})
-    u.ctx = ctx
-    u.to = to
-    return u
-    // return &{{ $name }}{ctx: ctx, to: to}
+  var _singleton{{ $name | capitalize }} = &{{ $name }}{}
+
+  func new{{ $name | capitalize }}() *{{ $name }} {
+    return _singleton{{ $name | capitalize }}
+    // u := {{ $name }}Pool.Get().(*{{ $name }})
+    // u.to = to
+    // return u
+    // return &{{ $name }}{to: to}
   }
 
   func (u *{{ $name }}) free() {
+    /*
     *u = {{ $name }}{}
     {{ $name }}Pool.Put(u)
+    */
   }
 
 templates.onBool: |
-  func (u *{{ .name }}) OnNil() error { return u.{{ .fn }}(false) }
-  func (u *{{ .name }}) OnBool(v bool) error { return u.{{ .fn }} (v) }
+  func (u *{{ .name }}) OnNil(ctx *unfoldCtx) error { return u.{{ .fn }}(ctx, false) }
+  func (u *{{ .name }}) OnBool(ctx *unfoldCtx, v bool) error { return u.{{ .fn }} (ctx, v) }
 
 templates.onString: |
-  func (u *{{ .name }}) OnNil() error { return u.{{ .fn }}("") }
-  func (u *{{ .name }}) OnString(v string) error { return u.{{ .fn }} (v) }
+  func (u *{{ .name }}) OnNil(ctx *unfoldCtx) error { return u.{{ .fn }}(ctx, "") }
+  func (u *{{ .name }}) OnString(ctx *unfoldCtx, v string) error { return u.{{ .fn }} (ctx, v) }
 
 templates.onNumber: |
-  func (u *{{ .name }}) OnNil() error              { return u.{{ .fn }}(0) }
-  func (u *{{ .name }}) OnInt8(v int8) error       { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnInt16(v int16) error     { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnInt32(v int32) error     { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnInt64(v int64) error     { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnInt(v int) error         { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnByte(v byte) error       { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnUint8(v uint8) error     { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnUint16(v uint16) error   { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnUint32(v uint32) error   { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnUint64(v uint64) error   { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnUint(v uint) error       { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnFloat32(v float32) error { return u.{{ .fn }}({{ .type }}(v)) }
-  func (u *{{ .name }}) OnFloat64(v float64) error { return u.{{ .fn }}({{ .type }}(v)) }
+  func (u *{{ .name }}) OnNil(ctx *unfoldCtx) error {
+    return u.{{ .fn }}(ctx, 0)
+  }
+  func (u *{{ .name }}) OnInt8(ctx *unfoldCtx, v int8) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnInt16(ctx *unfoldCtx, v int16) error     {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnInt32(ctx *unfoldCtx, v int32) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnInt64(ctx *unfoldCtx, v int64) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnInt(ctx *unfoldCtx, v int) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnByte(ctx *unfoldCtx, v byte) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnUint8(ctx *unfoldCtx, v uint8) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnUint16(ctx *unfoldCtx, v uint16) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnUint32(ctx *unfoldCtx, v uint32) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnUint64(ctx *unfoldCtx, v uint64) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnUint(ctx *unfoldCtx, v uint) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnFloat32(ctx *unfoldCtx, v float32) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }
+  func (u *{{ .name }}) OnFloat64(ctx *unfoldCtx, v float64) error {
+    return u.{{ .fn }}(ctx, {{ .type }}(v))
+  }

@@ -3,6 +3,7 @@ package gotype
 
 import (
 	"reflect"
+	"unsafe"
 
 	structform "github.com/urso/go-structform"
 )
@@ -50,9 +51,15 @@ type structTypeStack struct {
 }
 
 type unfolderStack struct {
-	current structform.Visitor
-	stack   []structform.Visitor
-	stack0  [32]structform.Visitor
+	current unfolder
+	stack   []unfolder
+	stack0  [32]unfolder
+}
+
+type ptrStack struct {
+	current unsafe.Pointer
+	stack   []unsafe.Pointer
+	stack0  [32]unsafe.Pointer
 }
 
 func (s *keyStack) init() {
@@ -181,17 +188,35 @@ func (s *structTypeStack) pop() structform.BaseType {
 	return old
 }
 
-func (s *unfolderStack) init(v structform.Visitor) {
+func (s *unfolderStack) init(v unfolder) {
 	s.current = v
 	s.stack = s.stack0[:0]
 }
 
-func (s *unfolderStack) push(v structform.Visitor) {
+func (s *unfolderStack) push(v unfolder) {
 	s.stack = append(s.stack, s.current)
 	s.current = v
 }
 
-func (s *unfolderStack) pop() structform.Visitor {
+func (s *unfolderStack) pop() unfolder {
+	old := s.current
+	last := len(s.stack) - 1
+	s.current = s.stack[last]
+	s.stack = s.stack[:last]
+	return old
+}
+
+func (s *ptrStack) init() {
+	s.current = nil
+	s.stack = s.stack0[:0]
+}
+
+func (s *ptrStack) push(v unsafe.Pointer) {
+	s.stack = append(s.stack, s.current)
+	s.current = v
+}
+
+func (s *ptrStack) pop() unsafe.Pointer {
 	old := s.current
 	last := len(s.stack) - 1
 	s.current = s.stack[last]

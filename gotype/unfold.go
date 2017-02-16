@@ -24,6 +24,7 @@ type unfoldCtx struct {
 	detail unfoldStateDetailStack
 
 	unfolder unfolderStack
+	ptr      ptrStack
 }
 
 // unfold state used to handled next value
@@ -94,6 +95,14 @@ func (u *Unfolder) setTarget(to interface{}) error {
 		return errNilInput
 	}
 
+	// init processing stacks
+	u.value.init(reflect.Value{})
+	u.key.init()
+	u.idx.init()
+	u.ptr.init()
+	u.state.init(unfoldStartState)
+	u.detail.init(unfoldWaitElem)
+
 	if u.trySetGotypeTarget(to) {
 		return nil
 	}
@@ -133,16 +142,10 @@ func (u *Unfolder) setTarget(to interface{}) error {
 		state0 = unfoldAssignState
 	}
 
-	// init processing stacks
-	u.value.init(reflect.Value{})
-	u.key.init()
-	u.idx.init()
-	u.state.init(unfoldStartState)
 	u.state.push(state0)
-	u.detail.init(unfoldWaitElem)
 	u.detail.push(detail0)
 
-	u.unfolder.init(newUnfolderRefl(&u.unfoldCtx))
+	u.unfolder.init(newUnfolderRefl())
 	u.value.push(vTo)
 
 	// u.unfoldCtx.setUnfoldGoTypes(to)
@@ -151,92 +154,85 @@ func (u *Unfolder) setTarget(to interface{}) error {
 }
 
 func (u *unfoldCtx) OnObjectStart(len int, baseType structform.BaseType) error {
-	return u.unfolder.current.OnObjectStart(len, baseType)
+	return u.unfolder.current.OnObjectStart(u, len, baseType)
 }
 
 func (u *unfoldCtx) OnObjectFinished() error {
-	return u.unfolder.current.OnObjectFinished()
+	return u.unfolder.current.OnObjectFinished(u)
 }
 
 func (u *unfoldCtx) OnKey(s string) error {
-	return u.unfolder.current.OnKey(s)
+	return u.unfolder.current.OnKey(u, s)
 }
 
 func (u *unfoldCtx) OnArrayStart(len int, baseType structform.BaseType) error {
-	return u.unfolder.current.OnArrayStart(len, baseType)
+	return u.unfolder.current.OnArrayStart(u, len, baseType)
 }
 
 func (u *unfoldCtx) OnArrayFinished() error {
-	return u.unfolder.current.OnArrayFinished()
+	return u.unfolder.current.OnArrayFinished(u)
 }
 
 func (u *unfoldCtx) OnNil() error {
-	return u.unfolder.current.OnNil()
+	return u.unfolder.current.OnNil(u)
 }
 
 func (u *unfoldCtx) OnBool(b bool) error {
-	return u.unfolder.current.OnBool(b)
+	return u.unfolder.current.OnBool(u, b)
 }
 
 func (u *unfoldCtx) OnString(s string) error {
-	return u.unfolder.current.OnString(s)
+	return u.unfolder.current.OnString(u, s)
 }
 
 func (u *unfoldCtx) OnInt8(i int8) error {
-	return u.unfolder.current.OnInt8(i)
+	return u.unfolder.current.OnInt8(u, i)
 }
 
 func (u *unfoldCtx) OnInt16(i int16) error {
-	return u.unfolder.current.OnInt16(i)
+	return u.unfolder.current.OnInt16(u, i)
 }
 
 func (u *unfoldCtx) OnInt32(i int32) error {
-	return u.unfolder.current.OnInt32(i)
+	return u.unfolder.current.OnInt32(u, i)
 }
 
 func (u *unfoldCtx) OnInt64(i int64) error {
-	return u.unfolder.current.OnInt64(i)
+	return u.unfolder.current.OnInt64(u, i)
 }
 
 func (u *unfoldCtx) OnInt(i int) error {
-	return u.unfolder.current.OnInt(i)
+	return u.unfolder.current.OnInt(u, i)
 }
 
 func (u *unfoldCtx) OnByte(b byte) error {
-	return u.unfolder.current.OnByte(b)
+	return u.unfolder.current.OnByte(u, b)
 }
 
 func (u *unfoldCtx) OnUint8(v uint8) error {
-	return u.unfolder.current.OnUint8(v)
+	return u.unfolder.current.OnUint8(u, v)
 }
 
 func (u *unfoldCtx) OnUint16(v uint16) error {
-	return u.unfolder.current.OnUint16(v)
+	return u.unfolder.current.OnUint16(u, v)
 }
 
 func (u *unfoldCtx) OnUint32(v uint32) error {
-	return u.unfolder.current.OnUint32(v)
+	return u.unfolder.current.OnUint32(u, v)
 }
 
 func (u *unfoldCtx) OnUint64(v uint64) error {
-	return u.unfolder.current.OnUint64(v)
+	return u.unfolder.current.OnUint64(u, v)
 }
 
 func (u *unfoldCtx) OnUint(v uint) error {
-	return u.unfolder.current.OnUint(v)
+	return u.unfolder.current.OnUint(u, v)
 }
 
 func (u *unfoldCtx) OnFloat32(f float32) error {
-	return u.unfolder.current.OnFloat32(f)
+	return u.unfolder.current.OnFloat32(u, f)
 }
 
 func (u *unfoldCtx) OnFloat64(f float64) error {
-	return u.unfolder.current.OnFloat64(f)
-}
-
-func (u *unfoldCtx) setUnfoldGoTypes(v interface{}) {
-	switch v.(type) {
-	default:
-	}
-
+	return u.unfolder.current.OnFloat64(u, f)
 }

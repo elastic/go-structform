@@ -35,10 +35,10 @@ templates.makeType: |
 
   {{ invoke "makeUnfoldType" "name" $name "type" $mapType }}
 
-  func (u *{{ $name }} ) OnObjectStart(l int, baseType structform.BaseType) error {
+  func (u *{{ $name }} ) OnObjectStart(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
     // TODO: validate baseType
 
-    dtl := &u.ctx.detail
+    dtl := &ctx.detail
     if dtl.current != unfoldWaitStart {
       return errUnexpectedObjectStart
     }
@@ -47,41 +47,45 @@ templates.makeType: |
     return nil
   }
 
-  func (u *{{ $name }} ) OnObjectFinished() error {
-    dtl := &u.ctx.detail
+  func (u *{{ $name }} ) OnObjectFinished(ctx *unfoldCtx) error {
+    dtl := &ctx.detail
     if dtl.current != unfoldWaitKey {
       return errExpectedObjectKey
     }
 
-    dtl.pop()
-    u.ctx.unfolder.pop()
     u.free()
+
+    dtl.pop()
+    ctx.ptr.pop()
+    ctx.unfolder.pop()
     return nil
   }
 
-  func (u *{{ $name }} ) OnKey(key string) error {
-    dtl := &u.ctx.detail
+  func (u *{{ $name }} ) OnKey(ctx *unfoldCtx, key string) error {
+    dtl := &ctx.detail
 
     if dtl.current != unfoldWaitKey {
       return errUnexpectedObjectKey
     }
 
-    u.ctx.key.push(key)
+    ctx.key.push(key)
     dtl.current = unfoldWaitElem
     return nil
   }
 
-  func (u *{{ $name }} ) put(v {{ $type }}) error {
-    dtl := &u.ctx.detail
+  func (u *{{ $name }} ) put(ctx *unfoldCtx, v {{ $type }}) error {
+    dtl := &ctx.detail
 
     if dtl.current != unfoldWaitElem {
       return errExpectedObjectKey
     }
 
-    if *u.to == nil {
-      *u.to = map[string]{{ $type }}{}
+    to := (*map[string]{{ $type }})(ctx.ptr.current)
+
+    if *to == nil {
+      *to = map[string]{{ $type }}{}
     }
-    (*u.to)[u.ctx.key.pop()] = v
+    (*to)[ctx.key.pop()] = v
     dtl.current = unfoldWaitKey
     return nil
   }
