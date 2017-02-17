@@ -1,7 +1,13 @@
 // This file has been generated from 'unfold_map.yml', do not edit
 package gotype
 
-import "github.com/urso/go-structform"
+import (
+	"fmt"
+	"reflect"
+	"unsafe"
+
+	"github.com/urso/go-structform"
+)
 
 type unfolderMapIfc struct {
 	reUnfoldEmpty
@@ -1669,4 +1675,139 @@ func (u *unfolderMapFloat64) OnFloat32(ctx *unfoldCtx, v float32) error {
 }
 func (u *unfolderMapFloat64) OnFloat64(ctx *unfoldCtx, v float64) error {
 	return u.put(ctx, float64(v))
+}
+
+func unfoldIfcStartSubMap(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
+	tmp := makeMapPtr(ctx, l, baseType)
+	if !ctx.trySetGotypeTarget(tmp) {
+		// use reflection
+		v := reflect.ValueOf(tmp)
+		ctx.ptr.push(unsafe.Pointer(v.Pointer()))
+		ctx.value.push(v.Elem())
+		ctx.state.push(unfoldMapState)
+		ctx.detail.push(unfoldWaitStart)
+		ctx.unfolder.push(newUnfolderRefl())
+	} else {
+		// duplicate pointer, so we can assign after child-object is finished
+		ctx.ptr.push(ctx.ptr.current)
+	}
+
+	ctx.baseType.push(baseType)
+	return ctx.unfolder.current.OnObjectStart(ctx, l, baseType)
+}
+
+func unfoldIfcFinishSubMap(ctx *unfoldCtx) (interface{}, error) {
+	child := ctx.ptr.pop()
+	bt := ctx.baseType.pop()
+	switch bt {
+
+	case structform.AnyType:
+		return *(*map[string]interface{})(child), nil
+
+	case structform.BoolType:
+		return *(*map[string]bool)(child), nil
+
+	case structform.ByteType:
+		return *(*map[string]byte)(child), nil
+
+	case structform.Float32Type:
+		return *(*map[string]float32)(child), nil
+
+	case structform.Int16Type:
+		return *(*map[string]int16)(child), nil
+
+	case structform.Int32Type:
+		return *(*map[string]int32)(child), nil
+
+	case structform.Int64Type:
+		return *(*map[string]int64)(child), nil
+
+	case structform.Int8Type:
+		return *(*map[string]int8)(child), nil
+
+	case structform.IntType:
+		return *(*map[string]int)(child), nil
+
+	case structform.StringType:
+		return *(*map[string]string)(child), nil
+
+	case structform.Uint16Type:
+		return *(*map[string]uint16)(child), nil
+
+	case structform.Uint32Type:
+		return *(*map[string]uint32)(child), nil
+
+	case structform.Uint64Type:
+		return *(*map[string]uint64)(child), nil
+
+	case structform.Uint8Type:
+		return *(*map[string]uint8)(child), nil
+
+	case structform.UintType:
+		return *(*map[string]uint)(child), nil
+
+	case structform.ZeroType:
+		return *(*map[string]interface{})(child), nil
+
+	default:
+		fmt.Println("base type: ", bt)
+		return nil, errTODO()
+	}
+}
+
+func makeMapPtr(ctx *unfoldCtx, l int, bt structform.BaseType) interface{} {
+	switch bt {
+
+	case structform.AnyType:
+		return new(map[string]interface{})
+
+	case structform.BoolType:
+		return new(map[string]bool)
+
+	case structform.ByteType:
+		return new(map[string]byte)
+
+	case structform.Float32Type:
+		return new(map[string]float32)
+
+	case structform.Int16Type:
+		return new(map[string]int16)
+
+	case structform.Int32Type:
+		return new(map[string]int32)
+
+	case structform.Int64Type:
+		return new(map[string]int64)
+
+	case structform.Int8Type:
+		return new(map[string]int8)
+
+	case structform.IntType:
+		return new(map[string]int)
+
+	case structform.StringType:
+		return new(map[string]string)
+
+	case structform.Uint16Type:
+		return new(map[string]uint16)
+
+	case structform.Uint32Type:
+		return new(map[string]uint32)
+
+	case structform.Uint64Type:
+		return new(map[string]uint64)
+
+	case structform.Uint8Type:
+		return new(map[string]uint8)
+
+	case structform.UintType:
+		return new(map[string]uint)
+
+	case structform.ZeroType:
+		return new(map[string]interface{})
+
+	default:
+		panic("invalid type code")
+		return nil
+	}
 }

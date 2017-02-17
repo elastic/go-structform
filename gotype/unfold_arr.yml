@@ -25,6 +25,56 @@ main: |
     {{ invoke "onNumberFns" "name" $name "type" $type "fn" "append" }}
   {{ end }}
 
+  func unfoldIfcStartSubArray(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
+    tmp := makeArrayPtr(ctx, l, baseType)
+    if !ctx.trySetGotypeTarget(tmp) {
+      // use reflection
+      v := reflect.ValueOf(tmp)
+      ctx.ptr.push(unsafe.Pointer(v.Pointer()))
+      ctx.value.push(v.Elem())
+      ctx.state.push(unfoldArrayState)
+      ctx.detail.push(unfoldWaitStart)
+      ctx.unfolder.push(newUnfolderRefl())
+      ctx.baseType.push(structform.ZeroType)
+    } else {
+      // duplicate pointer, so we can assign after child-array is finished
+      ctx.ptr.push(ctx.ptr.current)
+    }
+
+    ctx.baseType.push(baseType)
+    return ctx.unfolder.current.OnArrayStart(ctx, l, baseType)
+  }
+
+  func unfoldIfcFinishSubArray(ctx *unfoldCtx) (interface{}, error) {
+    child := ctx.ptr.pop()
+    bt := ctx.baseType.pop()
+    switch bt {
+    {{ range $bt, $gt := data.mapTypes }}
+    case structform.{{ $bt }}:
+      return *(*[]{{ $gt }})(child), nil
+    {{ end }}
+    default:
+      fmt.Println("base type: ", bt)
+      return nil, errTODO()
+    }
+  }
+
+  func makeArrayPtr(ctx *unfoldCtx, l int, bt structform.BaseType) interface{} {
+    switch bt {
+    {{ range $bt, $gt := data.mapTypes }}
+    case structform.{{ $bt }}:
+      if l <= 0 {
+        return new([]{{ $gt }})
+      }
+      tmp := make([]{{ $gt }}, l)
+      return &tmp
+    {{ end }}
+    default:
+      panic("invalid type code")
+      return nil
+    }
+  }
+
 templates.makeTypeWithName: |
   {{ $type := .type }}
   {{ $name := capitalize .name | printf "unfolderArr%v" }}

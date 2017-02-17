@@ -1,18 +1,5 @@
-
-data.numTypes: [
-    uint, uint8, uint16, uint32, uint64,
-    int, int8, int16, int32, int64,
-    float32, float64
-  ]
-
-data.primitiveTypes: [
-    bool,
-    string,
-    uint, uint8, uint16, uint32, uint64,
-    int, int8, int16, int32, int64,
-    float32, float64
-  ]
-
+import:
+  - "types.yml"
 
 templates.makeUnfoldType: |
   {{ $type := .type }}

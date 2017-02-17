@@ -24,6 +24,51 @@ main: |
     {{ invoke "onNumberFns" "name" $name "type" $type "fn" "put" }}
   {{ end }}
 
+  func unfoldIfcStartSubMap(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
+    tmp := makeMapPtr(ctx, l, baseType)
+    if !ctx.trySetGotypeTarget(tmp) {
+      // use reflection
+      v := reflect.ValueOf(tmp)
+      ctx.ptr.push(unsafe.Pointer(v.Pointer()))
+      ctx.value.push(v.Elem())
+      ctx.state.push(unfoldMapState)
+      ctx.detail.push(unfoldWaitStart)
+      ctx.unfolder.push(newUnfolderRefl())
+    } else {
+      // duplicate pointer, so we can assign after child-object is finished
+      ctx.ptr.push(ctx.ptr.current)
+    }
+
+    ctx.baseType.push(baseType)
+    return ctx.unfolder.current.OnObjectStart(ctx, l, baseType)
+  }
+
+  func unfoldIfcFinishSubMap(ctx *unfoldCtx) (interface{}, error) {
+    child := ctx.ptr.pop()
+    bt := ctx.baseType.pop()
+    switch bt {
+    {{ range $bt, $gt := data.mapTypes }}
+    case structform.{{ $bt }}:
+      return *(*map[string]{{ $gt }})(child), nil
+    {{ end }}
+    default:
+      fmt.Println("base type: ", bt)
+      return nil, errTODO()
+    }
+  }
+
+  func makeMapPtr(ctx *unfoldCtx, l int, bt structform.BaseType) interface{} {
+    switch bt {
+    {{ range $bt, $gt := data.mapTypes }}
+    case structform.{{ $bt }}:
+      return new(map[string]{{ $gt }})
+    {{ end }}
+    default:
+      panic("invalid type code")
+      return nil
+    }
+  }
+
 templates.makeTypeWithName: |
   {{ $type := .type }}
   {{ $name := capitalize .name | printf "unfolderMap%v" }}

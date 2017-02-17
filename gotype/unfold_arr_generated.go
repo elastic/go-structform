@@ -1,7 +1,13 @@
 // This file has been generated from 'unfold_arr.yml', do not edit
 package gotype
 
-import "github.com/urso/go-structform"
+import (
+	"fmt"
+	"reflect"
+	"unsafe"
+
+	"github.com/urso/go-structform"
+)
 
 type unfolderArrIfc struct {
 	reUnfoldEmpty
@@ -1534,4 +1540,204 @@ func (u *unfolderArrFloat64) OnFloat32(ctx *unfoldCtx, v float32) error {
 }
 func (u *unfolderArrFloat64) OnFloat64(ctx *unfoldCtx, v float64) error {
 	return u.append(ctx, float64(v))
+}
+
+func unfoldIfcStartSubArray(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
+	tmp := makeArrayPtr(ctx, l, baseType)
+	if !ctx.trySetGotypeTarget(tmp) {
+		// use reflection
+		v := reflect.ValueOf(tmp)
+		ctx.ptr.push(unsafe.Pointer(v.Pointer()))
+		ctx.value.push(v.Elem())
+		ctx.state.push(unfoldArrayState)
+		ctx.detail.push(unfoldWaitStart)
+		ctx.unfolder.push(newUnfolderRefl())
+		ctx.baseType.push(structform.ZeroType)
+	} else {
+		// duplicate pointer, so we can assign after child-array is finished
+		ctx.ptr.push(ctx.ptr.current)
+	}
+
+	ctx.baseType.push(baseType)
+	return ctx.unfolder.current.OnArrayStart(ctx, l, baseType)
+}
+
+func unfoldIfcFinishSubArray(ctx *unfoldCtx) (interface{}, error) {
+	child := ctx.ptr.pop()
+	bt := ctx.baseType.pop()
+	switch bt {
+
+	case structform.AnyType:
+		return *(*[]interface{})(child), nil
+
+	case structform.BoolType:
+		return *(*[]bool)(child), nil
+
+	case structform.ByteType:
+		return *(*[]byte)(child), nil
+
+	case structform.Float32Type:
+		return *(*[]float32)(child), nil
+
+	case structform.Int16Type:
+		return *(*[]int16)(child), nil
+
+	case structform.Int32Type:
+		return *(*[]int32)(child), nil
+
+	case structform.Int64Type:
+		return *(*[]int64)(child), nil
+
+	case structform.Int8Type:
+		return *(*[]int8)(child), nil
+
+	case structform.IntType:
+		return *(*[]int)(child), nil
+
+	case structform.StringType:
+		return *(*[]string)(child), nil
+
+	case structform.Uint16Type:
+		return *(*[]uint16)(child), nil
+
+	case structform.Uint32Type:
+		return *(*[]uint32)(child), nil
+
+	case structform.Uint64Type:
+		return *(*[]uint64)(child), nil
+
+	case structform.Uint8Type:
+		return *(*[]uint8)(child), nil
+
+	case structform.UintType:
+		return *(*[]uint)(child), nil
+
+	case structform.ZeroType:
+		return *(*[]interface{})(child), nil
+
+	default:
+		fmt.Println("base type: ", bt)
+		return nil, errTODO()
+	}
+}
+
+func makeArrayPtr(ctx *unfoldCtx, l int, bt structform.BaseType) interface{} {
+	switch bt {
+
+	case structform.AnyType:
+		if l <= 0 {
+			return new([]interface{})
+		}
+		tmp := make([]interface{}, l)
+		return &tmp
+
+	case structform.BoolType:
+		if l <= 0 {
+			return new([]bool)
+		}
+		tmp := make([]bool, l)
+		return &tmp
+
+	case structform.ByteType:
+		if l <= 0 {
+			return new([]byte)
+		}
+		tmp := make([]byte, l)
+		return &tmp
+
+	case structform.Float32Type:
+		if l <= 0 {
+			return new([]float32)
+		}
+		tmp := make([]float32, l)
+		return &tmp
+
+	case structform.Int16Type:
+		if l <= 0 {
+			return new([]int16)
+		}
+		tmp := make([]int16, l)
+		return &tmp
+
+	case structform.Int32Type:
+		if l <= 0 {
+			return new([]int32)
+		}
+		tmp := make([]int32, l)
+		return &tmp
+
+	case structform.Int64Type:
+		if l <= 0 {
+			return new([]int64)
+		}
+		tmp := make([]int64, l)
+		return &tmp
+
+	case structform.Int8Type:
+		if l <= 0 {
+			return new([]int8)
+		}
+		tmp := make([]int8, l)
+		return &tmp
+
+	case structform.IntType:
+		if l <= 0 {
+			return new([]int)
+		}
+		tmp := make([]int, l)
+		return &tmp
+
+	case structform.StringType:
+		if l <= 0 {
+			return new([]string)
+		}
+		tmp := make([]string, l)
+		return &tmp
+
+	case structform.Uint16Type:
+		if l <= 0 {
+			return new([]uint16)
+		}
+		tmp := make([]uint16, l)
+		return &tmp
+
+	case structform.Uint32Type:
+		if l <= 0 {
+			return new([]uint32)
+		}
+		tmp := make([]uint32, l)
+		return &tmp
+
+	case structform.Uint64Type:
+		if l <= 0 {
+			return new([]uint64)
+		}
+		tmp := make([]uint64, l)
+		return &tmp
+
+	case structform.Uint8Type:
+		if l <= 0 {
+			return new([]uint8)
+		}
+		tmp := make([]uint8, l)
+		return &tmp
+
+	case structform.UintType:
+		if l <= 0 {
+			return new([]uint)
+		}
+		tmp := make([]uint, l)
+		return &tmp
+
+	case structform.ZeroType:
+		if l <= 0 {
+			return new([]interface{})
+		}
+		tmp := make([]interface{}, l)
+		return &tmp
+
+	default:
+		panic("invalid type code")
+		return nil
+	}
 }
