@@ -1,36 +1,33 @@
 import:
   - unfold_templates.yml
 
-data.types: [
-    uint, uint8, uint16, uint32, uint64,
-    int, int8, int16, int32, int64,
-    float32, float64
-  ]
-
 main: |
   package gotype
 
   import "github.com/urso/go-structform"
 
   {{/* define types */}}
+  {{ invoke "makeTypeWithName" "name" "Ifc" "type" "interface{}" "makeSubArray" "unfoldIfcStartSubArray" }}
+
   {{ template "makeType" "bool" }}
   {{ template "makeType" "string" }}
-  {{ range .types }}
+  {{ range .numTypes }}
     {{ template "makeType" . }}
   {{ end }}
 
   {{/* create visitor callbacks */}}
-  {{ invoke "onBool" "name" "unfolderArrBool" "fn" "append" }}
-  {{ invoke "onString" "name" "unfolderArrString" "fn" "append" }}
-  {{ range .types }}
+  {{ invoke "onIfcFns" "name" "unfolderArrIfc" "fn" "append" }}
+  {{ invoke "onBoolFns" "name" "unfolderArrBool" "fn" "append" }}
+  {{ invoke "onStringFns" "name" "unfolderArrString" "fn" "append" }}
+  {{ range .numTypes }}
     {{ $type := . }}
     {{ $name := capitalize $type | printf "unfolderArr%v" }}
-    {{ invoke "onNumber" "name" $name "type" $type "fn" "append" }}
+    {{ invoke "onNumberFns" "name" $name "type" $type "fn" "append" }}
   {{ end }}
 
-templates.makeType: |
-  {{ $type := . }}
-  {{ $name := capitalize $type | printf "unfolderArr%v" }}
+templates.makeTypeWithName: |
+  {{ $type := .type }}
+  {{ $name := capitalize .name | printf "unfolderArr%v" }}
   {{ $arrType := $type | printf "[]%v" }}
 
   {{ invoke "makeUnfoldType" "name" $name "type" $arrType }}
@@ -40,10 +37,14 @@ templates.makeType: |
 
     dtl := &ctx.detail
     if dtl.current != unfoldWaitStart {
-      return errUnexpectedArrayStart
+      {{ if .makeSubArray }}
+        return {{ .makeSubArray }}(ctx, l, baseType)
+      {{ else }}
+        return errUnexpectedArrayStart
+      {{ end }}
     }
 
-    to := (*[]{{ $type }})(ctx.ptr.current)
+    to := u.ptr(ctx)
     if l < 0 {
       l = 0
     }
@@ -61,12 +62,12 @@ templates.makeType: |
   }
 
   func (u *{{ $name }} ) OnArrayFinished(ctx *unfoldCtx) error {
-    u.free()
-
-    ctx.idx.pop()
-    ctx.detail.pop()
     ctx.unfolder.pop()
     ctx.ptr.pop()
+    if ctx.detail.pop() != unfoldWaitStart {
+      ctx.idx.pop()
+    }
+
     return nil
   }
 

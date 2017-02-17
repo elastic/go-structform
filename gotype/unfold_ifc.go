@@ -8,29 +8,7 @@ import (
 	structform "github.com/urso/go-structform"
 )
 
-type unfolderIfc struct{}
-
-var _singletonUnfolderIfc = &unfolderIfc{}
-
-func newUnfolderIfc() *unfolderIfc {
-	return _singletonUnfolderIfc
-}
-
-func (*unfolderIfc) ptr(ctx *unfoldCtx) *interface{} {
-	return (*interface{})(ctx.ptr.current)
-}
-
-func (u *unfolderIfc) assign(ctx *unfoldCtx, v interface{}) error {
-	*u.ptr(ctx) = v
-	ctx.unfolder.pop()
-	ctx.ptr.pop()
-	return nil
-}
-
 func (u *unfolderIfc) OnArrayStart(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
-	// v := *ptr
-	// TODO: what if v != nil
-
 	return unfoldIfcStartSubArray(ctx, l, baseType)
 }
 
@@ -40,10 +18,6 @@ func (u *unfolderIfc) OnChildArrayDone(ctx *unfoldCtx) error {
 		err = u.assign(ctx, v)
 	}
 	return err
-}
-
-func (u *unfolderIfc) OnArrayFinished(c *unfoldCtx) error {
-	return errUnsupported
 }
 
 func (u *unfolderIfc) OnObjectStart(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
@@ -57,46 +31,6 @@ func (u *unfolderIfc) OnChildObjectDone(ctx *unfoldCtx) error {
 	}
 	return err
 }
-
-func (u *unfolderIfc) OnObjectFinished(*unfoldCtx) error {
-	return errUnsupported
-}
-
-func (u *unfolderIfc) OnKey(*unfoldCtx, string) error {
-	return errUnsupported
-}
-
-func (u *unfolderIfc) OnNil(ctx *unfoldCtx) error { return u.assign(ctx, nil) }
-
-func (u *unfolderIfc) OnBool(ctx *unfoldCtx, v bool) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnString(ctx *unfoldCtx, v string) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnInt8(ctx *unfoldCtx, v int8) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnInt16(ctx *unfoldCtx, v int16) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnInt32(ctx *unfoldCtx, v int32) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnInt64(ctx *unfoldCtx, v int64) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnInt(ctx *unfoldCtx, v int) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnByte(ctx *unfoldCtx, v byte) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnUint8(ctx *unfoldCtx, v uint8) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnUint16(ctx *unfoldCtx, v uint16) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnUint32(ctx *unfoldCtx, v uint32) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnUint64(ctx *unfoldCtx, v uint64) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnUint(ctx *unfoldCtx, v uint) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnFloat32(ctx *unfoldCtx, v float32) error { return u.assign(ctx, v) }
-
-func (u *unfolderIfc) OnFloat64(ctx *unfoldCtx, v float64) error { return u.assign(ctx, v) }
 
 // TODO: re-use preallocated nil object in unfoldCtx, so we don't have to allocate
 func makeArrayPtr(ctx *unfoldCtx, l int, t structform.BaseType) interface{} {

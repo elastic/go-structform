@@ -1,4 +1,4 @@
-data:
+data.stacks:
 - name: keyStack
   type: string
   init: '""'
@@ -24,7 +24,7 @@ data:
 main: |
   package gotype
 
-  {{ range . }}
+  {{ range .stacks }}
   type {{ .name }} struct {
     current {{ .type  }}
     stack []{{ .type }}
@@ -32,7 +32,7 @@ main: |
   }
   {{ end }}
   
-  {{ range . }}
+  {{ range .stacks }}
   func (s *{{ .name }}) init({{ if isnil .init }}v {{ .type }}{{end}}) {
     s.current = {{ if isnil .init }}v{{ else }}{{ .init }}{{end}}
     s.stack = s.stack0[:0]

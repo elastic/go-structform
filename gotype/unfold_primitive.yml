@@ -1,16 +1,11 @@
 import:
   - unfold_templates.yml
 
-data.numTypes: [
-    uint, uint8, uint16, uint32, uint64,
-    int, int8, int16, int32, int64,
-    float32, float64
-  ]
-
 main: |
   package gotype
 
   {{/* define types */}}
+  {{ invoke "makeTypeWithName" "name" "Ifc" "type" "interface{}" }}
   {{ template "makeType" "bool" }}
   {{ template "makeType" "string" }}
   {{ range .numTypes }} 
@@ -18,18 +13,18 @@ main: |
   {{ end }}
 
   {{/* create value visitor callbacks */}}
-  {{ invoke "onBool" "name" "unfolderBool" "fn" "assign" }}
-  {{ invoke "onString" "name" "unfolderString" "fn" "assign" }}
+  {{ invoke "onIfcFns" "name" "unfolderIfc" "fn" "assign" }}
+  {{ invoke "onBoolFns" "name" "unfolderBool" "fn" "assign" }}
+  {{ invoke "onStringFns" "name" "unfolderString" "fn" "assign" }}
   {{ range .numTypes }}
     {{ $type := . }}
     {{ $name := capitalize . | printf "unfolder%v" }}
-    {{ invoke "onNumber" "name" $name "type" $type "fn" "assign" }}
+    {{ invoke "onNumberFns" "name" $name "type" $type "fn" "assign" }}
   {{ end }}
 
-
-templates.makeType: |
-  {{ $type := . }}
-  {{ $name := capitalize . | printf "unfolder%v" }}
+templates.makeTypeWithName: |
+  {{ $type := .type }}
+  {{ $name := capitalize .name | printf "unfolder%v" }}
   {{ invoke "makeUnfoldType" "type" $type "name" $name }}
 
   func (u *{{ $name }} ) ptr(ctx *unfoldCtx) *{{ $type }} {
@@ -38,7 +33,6 @@ templates.makeType: |
 
   func (u *{{ $name }}) assign(ctx *unfoldCtx, v {{ $type }}) error {
     *u.ptr(ctx) = v
-    u.free()
 
     ctx.unfolder.pop()
     ctx.ptr.pop()

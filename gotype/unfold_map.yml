@@ -1,18 +1,13 @@
 import:
   - unfold_templates.yml
 
-data.numTypes: [
-    uint, uint8, uint16, uint32, uint64,
-    int, int8, int16, int32, int64,
-    float32, float64
-  ]
-
 main: |
   package gotype
 
   import "github.com/urso/go-structform"
 
   {{/* define types */}}
+  {{ invoke "makeTypeWithName" "name" "Ifc" "type" "interface{}" "makeSubObject" "unfoldIfcStartSubMap" }}
   {{ template "makeType" "bool" }}
   {{ template "makeType" "string" }}
   {{ range .numTypes }}
@@ -20,17 +15,18 @@ main: |
   {{ end }}
 
   {{/* create value visitor callbacks */}}
-  {{ invoke "onBool" "name" "unfolderMapBool" "fn" "put" }}
-  {{ invoke "onString" "name" "unfolderMapString" "fn" "put" }}
+  {{ invoke "onIfcFns" "name" "unfolderMapIfc" "fn" "put" }}
+  {{ invoke "onBoolFns" "name" "unfolderMapBool" "fn" "put" }}
+  {{ invoke "onStringFns" "name" "unfolderMapString" "fn" "put" }}
   {{ range .numTypes }}
     {{ $type := . }}
     {{ $name := capitalize $type | printf "unfolderMap%v" }}
-    {{ invoke "onNumber" "name" $name "type" $type "fn" "put" }}
+    {{ invoke "onNumberFns" "name" $name "type" $type "fn" "put" }}
   {{ end }}
 
-templates.makeType: |
-  {{ $type := . }}
-  {{ $name := capitalize $type | printf "unfolderMap%v" }}
+templates.makeTypeWithName: |
+  {{ $type := .type }}
+  {{ $name := capitalize .name | printf "unfolderMap%v" }}
   {{ $mapType := $type | printf "map[string]%v" }}
 
   {{ invoke "makeUnfoldType" "name" $name "type" $mapType }}
@@ -39,11 +35,19 @@ templates.makeType: |
     // TODO: validate baseType
 
     dtl := &ctx.detail
-    if dtl.current != unfoldWaitStart {
-      return errUnexpectedObjectStart
+    switch dtl.current {
+    case unfoldWaitStart:
+      dtl.current = unfoldWaitKey
+    case unfoldWaitKey:
+      return errExpectedObjectKey
+    default:
+      {{ if .makeSubObject }}
+      return {{ .makeSubObject }}(ctx, l, baseType)
+      {{ else }}
+        return errUnsupported
+      {{ end }}
     }
 
-    dtl.current = unfoldWaitKey
     return nil
   }
 
@@ -52,8 +56,6 @@ templates.makeType: |
     if dtl.current != unfoldWaitKey {
       return errExpectedObjectKey
     }
-
-    u.free()
 
     dtl.pop()
     ctx.ptr.pop()

@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/elastic/go-ucfg"
+	"github.com/elastic/go-ucfg/cfgutil"
 	"github.com/elastic/go-ucfg/yaml"
 
 	"golang.org/x/tools/imports"
@@ -21,6 +22,8 @@ var cfgOpts = []ucfg.Option{
 	ucfg.PathSep("."),
 	ucfg.ResolveEnv,
 }
+
+var datOpts = append([]ucfg.Option{ucfg.VarExp}, cfgOpts...)
 
 func main() {
 	if err := run(); err != nil {
@@ -51,18 +54,24 @@ func run() error {
 		Main      string
 	}{}
 	if err = loadConfigInto(args[0], &gen); err != nil {
+		errPrint("Failed to load script template")
 		return err
 	}
 
 	dat := struct {
-		Data interface{}
+		Data *ucfg.Config
 	}{}
 	if err = loadConfigInto(args[0], &dat, ucfg.VarExp); err != nil {
+		errPrint("Failed to load script data")
 		return err
 	}
 
 	var T *template.Template
+	D := cfgutil.NewCollector(nil, datOpts...)
+	var data map[string]interface{}
+
 	var defaultFuncs = template.FuncMap{
+		"data":       func() map[string]interface{} { return data },
 		"toLower":    strings.ToLower,
 		"toUpper":    strings.ToUpper,
 		"capitalize": strings.Title,
@@ -73,8 +82,25 @@ func run() error {
 		"invoke": makeInvokeCommand(&T), // invoke another template with named parameters
 	}
 
-	T, err = loadTemplates(template.New("").Funcs(defaultFuncs), gen.Import)
-	if err != nil {
+	var td *ucfg.Config
+	T, td, err = loadTemplates(template.New("").Funcs(defaultFuncs), gen.Import)
+	if err := D.Add(td, err); err != nil {
+		errPrint("Failed to load imported template files")
+		return err
+	}
+
+	if err := D.Add(dat.Data, nil); err != nil {
+		errPrint("Failed to merge template data with top-level script")
+		return err
+	}
+
+	if err := D.Add(ucfg.NewFrom(userData, datOpts...)); err != nil {
+		errPrintf("Failed to merge user data")
+		return err
+	}
+
+	if err := D.Config().Unpack(&data, datOpts...); err != nil {
+		errPrint("Failed to unpack data")
 		return err
 	}
 
@@ -90,19 +116,6 @@ func run() error {
 	T, err = T.Parse(gen.Main)
 	if err != nil {
 		return fmt.Errorf("Parsing 'template' fields failed with %v", err)
-	}
-
-	var data interface{}
-	switch {
-	case userData == nil && dat.Data != nil:
-		data = dat.Data
-	case userData != nil && dat.Data == nil:
-		data = userData
-	case userData != nil && dat.Data != nil:
-		data = map[string]interface{}{
-			"config":   userData,
-			"template": dat.Data,
-		}
 	}
 
 	if err := T.Execute(&buf, data); err != nil {
@@ -125,30 +138,68 @@ func run() error {
 	return err
 }
 
-func loadTemplates(T *template.Template, files []string) (*template.Template, error) {
+func loadTemplates(T *template.Template, files []string) (*template.Template, *ucfg.Config, error) {
+
+	/*
+		var childData []*ucfg.Config
+		var templatesData []*ucfg.Config
+	*/
+
+	childData := cfgutil.NewCollector(nil, datOpts...)
+	templateData := cfgutil.NewCollector(nil, datOpts...)
+
 	for _, file := range files {
 		gen := struct {
 			Import    []string
 			Templates map[string]string
 		}{}
 
+		dat := struct {
+			Data *ucfg.Config
+		}{}
+
 		err := loadConfigInto(file, &gen)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		T, err = loadTemplates(T, gen.Import)
+		var D *ucfg.Config
+		T, D, err = loadTemplates(T, gen.Import)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		T, err = addTemplates(T, gen.Templates)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+
+		err = loadConfigInto(file, &dat, ucfg.VarExp)
+		if err != nil {
+			errPrint("Failed to load data from: ", file)
+			return nil, nil, err
+		}
+
+		childData.Add(D, nil)
+		templateData.Add(dat.Data, nil)
 	}
 
-	return T, nil
+	if err := childData.Error(); err != nil {
+		errPrintf("Procesing file %v: failed to merge child data: %v", files, err)
+		return nil, nil, err
+	}
+
+	if err := templateData.Error(); err != nil {
+		errPrintf("Procesing file %v: failed to merge template data: %v", files, err)
+		return nil, nil, err
+	}
+
+	if err := childData.Add(templateData.Config(), templateData.Error()); err != nil {
+		errPrintf("Failed to combine template data: ", err)
+		return nil, nil, err
+	}
+
+	return T, childData.Config(), nil
 }
 
 func addTemplates(T *template.Template, templates map[string]string) (*template.Template, error) {
@@ -220,7 +271,7 @@ func makeInvokeCommand(T **template.Template) func(string, ...interface{}) (stri
 	}
 }
 
-func loadData(file string) (map[string]string, error) {
+func loadData(file string) (map[string]interface{}, error) {
 	if file == "" {
 		return nil, nil
 	}
@@ -239,7 +290,7 @@ func loadData(file string) (map[string]string, error) {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	state := map[string]string{}
+	state := map[string]interface{}{}
 	for name, entry := range meta.Entries {
 		// parse default value
 		T, err := template.New("").Parse(entry.Default)
@@ -269,4 +320,12 @@ func loadData(file string) (map[string]string, error) {
 	}
 
 	return state, nil
+}
+
+func errPrint(msg ...interface{}) {
+	fmt.Fprintln(os.Stderr, msg...)
+}
+
+func errPrintf(format string, msg ...interface{}) {
+	fmt.Fprintf(os.Stderr, format+"\n", msg...)
 }

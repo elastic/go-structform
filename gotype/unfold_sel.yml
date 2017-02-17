@@ -1,10 +1,5 @@
-data.types: [
-    bool,
-    string,
-    uint, uint8, uint16, uint32, uint64,
-    int, int8, int16, int32, int64,
-    float32, float64
-  ]
+import:
+  - unfold_templates.yml
 
 data.withIfc: ${WITH_IFC:true}
 data.reflOnly: ${REFL_ONLY:false}
@@ -25,7 +20,7 @@ main: |
         u.ptr.push(unsafe.Pointer(ptr))
         u.unfolder.push(newUnfolderIfc())
       {{ end }}
-      {{ range .types }}
+      {{ range .primitiveTypes }}
       case *{{ . }}:
         u.ptr.push(unsafe.Pointer(ptr))
         u.unfolder.push(newUnfolder{{ . | capitalize }}())
@@ -38,7 +33,7 @@ main: |
         u.detail.push(unfoldWaitStart)
         u.unfolder.push(newUnfolderArrIfc())
       {{ end }}
-      {{ range .types }}
+      {{ range .primitiveTypes }}
       case *[]{{ . }}:
         u.ptr.push(unsafe.Pointer(ptr))
         u.detail.push(unfoldWaitStart)
@@ -52,7 +47,7 @@ main: |
         u.detail.push(unfoldWaitStart)
         u.unfolder.push(newUnfolderMapIfc())
       {{ end }}
-      {{ range .types }}
+      {{ range .primitiveTypes }}
       case *map[string]{{ . }}:
         u.ptr.push(unsafe.Pointer(ptr))
         u.detail.push(unfoldWaitStart)

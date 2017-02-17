@@ -1,3 +1,19 @@
+
+data.numTypes: [
+    uint, uint8, uint16, uint32, uint64,
+    int, int8, int16, int32, int64,
+    float32, float64
+  ]
+
+data.primitiveTypes: [
+    bool,
+    string,
+    uint, uint8, uint16, uint32, uint64,
+    int, int8, int16, int32, int64,
+    float32, float64
+  ]
+
+
 templates.makeUnfoldType: |
   {{ $type := .type }}
   {{ $name := .name }}
@@ -6,43 +22,48 @@ templates.makeUnfoldType: |
     reUnfoldEmpty
   }
 
-  /*
-  var {{ $name }}Pool = sync.Pool{
-    New: func() interface{} {
-      return &{{ $name }}{}
-    },
-  }
-  */
-
   var _singleton{{ $name | capitalize }} = &{{ $name }}{}
 
   func new{{ $name | capitalize }}() *{{ $name }} {
     return _singleton{{ $name | capitalize }}
-    // u := {{ $name }}Pool.Get().(*{{ $name }})
-    // u.to = to
-    // return u
-    // return &{{ $name }}{to: to}
   }
 
-  func (u *{{ $name }}) free() {
-    /*
-    *u = {{ $name }}{}
-    {{ $name }}Pool.Put(u)
-    */
-  }
+templates.makeType: |
+  {{ invoke "makeTypeWithName" "name" (capitalize .) "type" . }}
+
+templates.onBoolFns: |
+  {{ invoke "onNil" "name" .name "fn" .fn "default" "false" }}
+  {{ invoke "onBool" "name" .name "fn" .fn }}
+
+templates.onStringFns: |
+  {{ invoke "onNil" "name" .name "fn" .fn "default" "\"\"" }}
+  {{ invoke "onString" "name" .name "fn" .fn }}
+
+templates.onNumberFns: |
+  {{ invoke "onNil" "name" .name "fn" .fn "default" "0" }}
+  {{ invoke "onNumber" "name" .name "type" .type "fn" .fn }}
+
+templates.onIfcFns: |
+  {{ invoke "onNil" "name" .name "fn" .fn "default" "nil" }}
+  {{ invoke "onBool" "name" .name "fn" .fn }}
+  {{ invoke "onString" "name" .name "fn" .fn }}
+  {{ invoke "onNumber" "name" .name "type" "(interface{})" "fn" .fn }}
+
 
 templates.onBool: |
-  func (u *{{ .name }}) OnNil(ctx *unfoldCtx) error { return u.{{ .fn }}(ctx, false) }
   func (u *{{ .name }}) OnBool(ctx *unfoldCtx, v bool) error { return u.{{ .fn }} (ctx, v) }
 
 templates.onString: |
-  func (u *{{ .name }}) OnNil(ctx *unfoldCtx) error { return u.{{ .fn }}(ctx, "") }
   func (u *{{ .name }}) OnString(ctx *unfoldCtx, v string) error { return u.{{ .fn }} (ctx, v) }
 
-templates.onNumber: |
+
+templates.onNil: |
   func (u *{{ .name }}) OnNil(ctx *unfoldCtx) error {
-    return u.{{ .fn }}(ctx, 0)
+    return u.{{ .fn }}(ctx, {{ .default }})
   }
+
+
+templates.onNumber: |
   func (u *{{ .name }}) OnInt8(ctx *unfoldCtx, v int8) error {
     return u.{{ .fn }}(ctx, {{ .type }}(v))
   }
