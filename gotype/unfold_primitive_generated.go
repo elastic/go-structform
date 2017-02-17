@@ -30,12 +30,13 @@ func (u *unfolderBool) free() {
 	*/
 }
 
-func (u *unfolderBool) assign(ctx *unfoldCtx, v bool) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderBool) ptr(ctx *unfoldCtx) *bool {
+	return (*bool)(ctx.ptr.current)
+}
 
-	to := (*bool)(ctx.ptr.current)
-	*to = v
+func (u *unfolderBool) assign(ctx *unfoldCtx, v bool) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -71,12 +72,13 @@ func (u *unfolderString) free() {
 	*/
 }
 
-func (u *unfolderString) assign(ctx *unfoldCtx, v string) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderString) ptr(ctx *unfoldCtx) *string {
+	return (*string)(ctx.ptr.current)
+}
 
-	to := (*string)(ctx.ptr.current)
-	*to = v
+func (u *unfolderString) assign(ctx *unfoldCtx, v string) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -112,12 +114,13 @@ func (u *unfolderUint) free() {
 	*/
 }
 
-func (u *unfolderUint) assign(ctx *unfoldCtx, v uint) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderUint) ptr(ctx *unfoldCtx) *uint {
+	return (*uint)(ctx.ptr.current)
+}
 
-	to := (*uint)(ctx.ptr.current)
-	*to = v
+func (u *unfolderUint) assign(ctx *unfoldCtx, v uint) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -153,12 +156,13 @@ func (u *unfolderUint8) free() {
 	*/
 }
 
-func (u *unfolderUint8) assign(ctx *unfoldCtx, v uint8) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderUint8) ptr(ctx *unfoldCtx) *uint8 {
+	return (*uint8)(ctx.ptr.current)
+}
 
-	to := (*uint8)(ctx.ptr.current)
-	*to = v
+func (u *unfolderUint8) assign(ctx *unfoldCtx, v uint8) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -194,12 +198,13 @@ func (u *unfolderUint16) free() {
 	*/
 }
 
-func (u *unfolderUint16) assign(ctx *unfoldCtx, v uint16) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderUint16) ptr(ctx *unfoldCtx) *uint16 {
+	return (*uint16)(ctx.ptr.current)
+}
 
-	to := (*uint16)(ctx.ptr.current)
-	*to = v
+func (u *unfolderUint16) assign(ctx *unfoldCtx, v uint16) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -235,12 +240,13 @@ func (u *unfolderUint32) free() {
 	*/
 }
 
-func (u *unfolderUint32) assign(ctx *unfoldCtx, v uint32) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderUint32) ptr(ctx *unfoldCtx) *uint32 {
+	return (*uint32)(ctx.ptr.current)
+}
 
-	to := (*uint32)(ctx.ptr.current)
-	*to = v
+func (u *unfolderUint32) assign(ctx *unfoldCtx, v uint32) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -276,12 +282,13 @@ func (u *unfolderUint64) free() {
 	*/
 }
 
-func (u *unfolderUint64) assign(ctx *unfoldCtx, v uint64) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderUint64) ptr(ctx *unfoldCtx) *uint64 {
+	return (*uint64)(ctx.ptr.current)
+}
 
-	to := (*uint64)(ctx.ptr.current)
-	*to = v
+func (u *unfolderUint64) assign(ctx *unfoldCtx, v uint64) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -317,12 +324,13 @@ func (u *unfolderInt) free() {
 	*/
 }
 
-func (u *unfolderInt) assign(ctx *unfoldCtx, v int) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderInt) ptr(ctx *unfoldCtx) *int {
+	return (*int)(ctx.ptr.current)
+}
 
-	to := (*int)(ctx.ptr.current)
-	*to = v
+func (u *unfolderInt) assign(ctx *unfoldCtx, v int) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -358,12 +366,13 @@ func (u *unfolderInt8) free() {
 	*/
 }
 
-func (u *unfolderInt8) assign(ctx *unfoldCtx, v int8) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderInt8) ptr(ctx *unfoldCtx) *int8 {
+	return (*int8)(ctx.ptr.current)
+}
 
-	to := (*int8)(ctx.ptr.current)
-	*to = v
+func (u *unfolderInt8) assign(ctx *unfoldCtx, v int8) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -399,12 +408,13 @@ func (u *unfolderInt16) free() {
 	*/
 }
 
-func (u *unfolderInt16) assign(ctx *unfoldCtx, v int16) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderInt16) ptr(ctx *unfoldCtx) *int16 {
+	return (*int16)(ctx.ptr.current)
+}
 
-	to := (*int16)(ctx.ptr.current)
-	*to = v
+func (u *unfolderInt16) assign(ctx *unfoldCtx, v int16) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -440,12 +450,13 @@ func (u *unfolderInt32) free() {
 	*/
 }
 
-func (u *unfolderInt32) assign(ctx *unfoldCtx, v int32) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderInt32) ptr(ctx *unfoldCtx) *int32 {
+	return (*int32)(ctx.ptr.current)
+}
 
-	to := (*int32)(ctx.ptr.current)
-	*to = v
+func (u *unfolderInt32) assign(ctx *unfoldCtx, v int32) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -481,12 +492,13 @@ func (u *unfolderInt64) free() {
 	*/
 }
 
-func (u *unfolderInt64) assign(ctx *unfoldCtx, v int64) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderInt64) ptr(ctx *unfoldCtx) *int64 {
+	return (*int64)(ctx.ptr.current)
+}
 
-	to := (*int64)(ctx.ptr.current)
-	*to = v
+func (u *unfolderInt64) assign(ctx *unfoldCtx, v int64) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -522,12 +534,13 @@ func (u *unfolderFloat32) free() {
 	*/
 }
 
-func (u *unfolderFloat32) assign(ctx *unfoldCtx, v float32) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderFloat32) ptr(ctx *unfoldCtx) *float32 {
+	return (*float32)(ctx.ptr.current)
+}
 
-	to := (*float32)(ctx.ptr.current)
-	*to = v
+func (u *unfolderFloat32) assign(ctx *unfoldCtx, v float32) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()
@@ -563,12 +576,13 @@ func (u *unfolderFloat64) free() {
 	*/
 }
 
-func (u *unfolderFloat64) assign(ctx *unfoldCtx, v float64) error {
-	// *u.to = v
-	u.free()
+func (u *unfolderFloat64) ptr(ctx *unfoldCtx) *float64 {
+	return (*float64)(ctx.ptr.current)
+}
 
-	to := (*float64)(ctx.ptr.current)
-	*to = v
+func (u *unfolderFloat64) assign(ctx *unfoldCtx, v float64) error {
+	*u.ptr(ctx) = v
+	u.free()
 
 	ctx.unfolder.pop()
 	ctx.ptr.pop()

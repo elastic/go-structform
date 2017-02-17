@@ -70,6 +70,10 @@ func (u *unfolderMapBool) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapBool) ptr(ctx *unfoldCtx) *map[string]bool {
+	return (*map[string]bool)(ctx.ptr.current)
+}
+
 func (u *unfolderMapBool) put(ctx *unfoldCtx, v bool) error {
 	dtl := &ctx.detail
 
@@ -77,8 +81,7 @@ func (u *unfolderMapBool) put(ctx *unfoldCtx, v bool) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]bool)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]bool{}
 	}
@@ -154,6 +157,10 @@ func (u *unfolderMapString) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapString) ptr(ctx *unfoldCtx) *map[string]string {
+	return (*map[string]string)(ctx.ptr.current)
+}
+
 func (u *unfolderMapString) put(ctx *unfoldCtx, v string) error {
 	dtl := &ctx.detail
 
@@ -161,8 +168,7 @@ func (u *unfolderMapString) put(ctx *unfoldCtx, v string) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]string)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]string{}
 	}
@@ -238,6 +244,10 @@ func (u *unfolderMapUint) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapUint) ptr(ctx *unfoldCtx) *map[string]uint {
+	return (*map[string]uint)(ctx.ptr.current)
+}
+
 func (u *unfolderMapUint) put(ctx *unfoldCtx, v uint) error {
 	dtl := &ctx.detail
 
@@ -245,8 +255,7 @@ func (u *unfolderMapUint) put(ctx *unfoldCtx, v uint) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]uint)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]uint{}
 	}
@@ -322,6 +331,10 @@ func (u *unfolderMapUint8) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapUint8) ptr(ctx *unfoldCtx) *map[string]uint8 {
+	return (*map[string]uint8)(ctx.ptr.current)
+}
+
 func (u *unfolderMapUint8) put(ctx *unfoldCtx, v uint8) error {
 	dtl := &ctx.detail
 
@@ -329,8 +342,7 @@ func (u *unfolderMapUint8) put(ctx *unfoldCtx, v uint8) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]uint8)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]uint8{}
 	}
@@ -406,6 +418,10 @@ func (u *unfolderMapUint16) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapUint16) ptr(ctx *unfoldCtx) *map[string]uint16 {
+	return (*map[string]uint16)(ctx.ptr.current)
+}
+
 func (u *unfolderMapUint16) put(ctx *unfoldCtx, v uint16) error {
 	dtl := &ctx.detail
 
@@ -413,8 +429,7 @@ func (u *unfolderMapUint16) put(ctx *unfoldCtx, v uint16) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]uint16)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]uint16{}
 	}
@@ -490,6 +505,10 @@ func (u *unfolderMapUint32) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapUint32) ptr(ctx *unfoldCtx) *map[string]uint32 {
+	return (*map[string]uint32)(ctx.ptr.current)
+}
+
 func (u *unfolderMapUint32) put(ctx *unfoldCtx, v uint32) error {
 	dtl := &ctx.detail
 
@@ -497,8 +516,7 @@ func (u *unfolderMapUint32) put(ctx *unfoldCtx, v uint32) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]uint32)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]uint32{}
 	}
@@ -574,6 +592,10 @@ func (u *unfolderMapUint64) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapUint64) ptr(ctx *unfoldCtx) *map[string]uint64 {
+	return (*map[string]uint64)(ctx.ptr.current)
+}
+
 func (u *unfolderMapUint64) put(ctx *unfoldCtx, v uint64) error {
 	dtl := &ctx.detail
 
@@ -581,8 +603,7 @@ func (u *unfolderMapUint64) put(ctx *unfoldCtx, v uint64) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]uint64)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]uint64{}
 	}
@@ -658,6 +679,10 @@ func (u *unfolderMapInt) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapInt) ptr(ctx *unfoldCtx) *map[string]int {
+	return (*map[string]int)(ctx.ptr.current)
+}
+
 func (u *unfolderMapInt) put(ctx *unfoldCtx, v int) error {
 	dtl := &ctx.detail
 
@@ -665,8 +690,7 @@ func (u *unfolderMapInt) put(ctx *unfoldCtx, v int) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]int)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]int{}
 	}
@@ -742,6 +766,10 @@ func (u *unfolderMapInt8) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapInt8) ptr(ctx *unfoldCtx) *map[string]int8 {
+	return (*map[string]int8)(ctx.ptr.current)
+}
+
 func (u *unfolderMapInt8) put(ctx *unfoldCtx, v int8) error {
 	dtl := &ctx.detail
 
@@ -749,8 +777,7 @@ func (u *unfolderMapInt8) put(ctx *unfoldCtx, v int8) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]int8)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]int8{}
 	}
@@ -826,6 +853,10 @@ func (u *unfolderMapInt16) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapInt16) ptr(ctx *unfoldCtx) *map[string]int16 {
+	return (*map[string]int16)(ctx.ptr.current)
+}
+
 func (u *unfolderMapInt16) put(ctx *unfoldCtx, v int16) error {
 	dtl := &ctx.detail
 
@@ -833,8 +864,7 @@ func (u *unfolderMapInt16) put(ctx *unfoldCtx, v int16) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]int16)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]int16{}
 	}
@@ -910,6 +940,10 @@ func (u *unfolderMapInt32) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapInt32) ptr(ctx *unfoldCtx) *map[string]int32 {
+	return (*map[string]int32)(ctx.ptr.current)
+}
+
 func (u *unfolderMapInt32) put(ctx *unfoldCtx, v int32) error {
 	dtl := &ctx.detail
 
@@ -917,8 +951,7 @@ func (u *unfolderMapInt32) put(ctx *unfoldCtx, v int32) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]int32)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]int32{}
 	}
@@ -994,6 +1027,10 @@ func (u *unfolderMapInt64) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapInt64) ptr(ctx *unfoldCtx) *map[string]int64 {
+	return (*map[string]int64)(ctx.ptr.current)
+}
+
 func (u *unfolderMapInt64) put(ctx *unfoldCtx, v int64) error {
 	dtl := &ctx.detail
 
@@ -1001,8 +1038,7 @@ func (u *unfolderMapInt64) put(ctx *unfoldCtx, v int64) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]int64)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]int64{}
 	}
@@ -1078,6 +1114,10 @@ func (u *unfolderMapFloat32) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapFloat32) ptr(ctx *unfoldCtx) *map[string]float32 {
+	return (*map[string]float32)(ctx.ptr.current)
+}
+
 func (u *unfolderMapFloat32) put(ctx *unfoldCtx, v float32) error {
 	dtl := &ctx.detail
 
@@ -1085,8 +1125,7 @@ func (u *unfolderMapFloat32) put(ctx *unfoldCtx, v float32) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]float32)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]float32{}
 	}
@@ -1162,6 +1201,10 @@ func (u *unfolderMapFloat64) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderMapFloat64) ptr(ctx *unfoldCtx) *map[string]float64 {
+	return (*map[string]float64)(ctx.ptr.current)
+}
+
 func (u *unfolderMapFloat64) put(ctx *unfoldCtx, v float64) error {
 	dtl := &ctx.detail
 
@@ -1169,8 +1212,7 @@ func (u *unfolderMapFloat64) put(ctx *unfoldCtx, v float64) error {
 		return errExpectedObjectKey
 	}
 
-	to := (*map[string]float64)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if *to == nil {
 		*to = map[string]float64{}
 	}

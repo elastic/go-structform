@@ -19,7 +19,7 @@ main: |
     {{ template "makeType" . }}
   {{ end }}
 
-  {{/* create visitor callbacks */}}
+  {{/* create value visitor callbacks */}}
   {{ invoke "onBool" "name" "unfolderMapBool" "fn" "put" }}
   {{ invoke "onString" "name" "unfolderMapString" "fn" "put" }}
   {{ range .numTypes }}
@@ -73,6 +73,10 @@ templates.makeType: |
     return nil
   }
 
+  func (u *{{ $name }} ) ptr(ctx *unfoldCtx) *map[string]{{ $type }} {
+    return (*map[string]{{ $type }})(ctx.ptr.current)
+  }
+
   func (u *{{ $name }} ) put(ctx *unfoldCtx, v {{ $type }}) error {
     dtl := &ctx.detail
 
@@ -80,8 +84,7 @@ templates.makeType: |
       return errExpectedObjectKey
     }
 
-    to := (*map[string]{{ $type }})(ctx.ptr.current)
-
+    to := u.ptr(ctx)
     if *to == nil {
       *to = map[string]{{ $type }}{}
     }

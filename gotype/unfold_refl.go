@@ -21,6 +21,9 @@ func newUnfolderRefl() *unfolderRefl {
 	return singletionUnfolderRefl
 }
 
+func (unfolderRefl) OnChildArrayDone(_ *unfoldCtx) error  { return nil }
+func (unfolderRefl) OnChildObjectDone(_ *unfoldCtx) error { return nil }
+
 func (unfolderRefl) OnObjectStart(ctx *unfoldCtx, len int, baseType structform.BaseType) error {
 	println("OnObjectStart:")
 	ctx.printStacks()
@@ -39,6 +42,7 @@ func (unfolderRefl) OnObjectStart(ctx *unfoldCtx, len int, baseType structform.B
 	case unfoldAssignState:
 		st.push(unfoldMapState)
 		dtl.push(unfoldWaitKey)
+		ctx.unfolder.push(newUnfolderRefl())
 
 		v.push(makeMap(baseType))
 		return nil
@@ -73,6 +77,7 @@ func (unfolderRefl) OnObjectStart(ctx *unfoldCtx, len int, baseType structform.B
 
 	st.push(unfoldMapState)
 	dtl.push(unfoldWaitKey)
+	ctx.unfolder.push(newUnfolderRefl())
 
 	if v.current.Type().Elem() == tInterface {
 		v.push(makeMap(baseType))
@@ -101,12 +106,14 @@ func (u unfolderRefl) OnObjectFinished(ctx *unfoldCtx) error {
 		(st.current == unfoldAssignState && dtl.current == unfoldWaitElem)
 	if waitAssigned {
 		st.pop()
+		ctx.unfolder.pop()
 		dtl.pop()
 		v.pop()
 	}
 
 	dtl.pop()
 	st.pop()
+	ctx.unfolder.pop()
 	value := v.pop()
 	return u.onValue(ctx, value)
 }
@@ -131,13 +138,15 @@ func (u unfolderRefl) OnKey(ctx *unfoldCtx, s string) error {
 }
 
 func (u unfolderRefl) onMapKey(ctx *unfoldCtx, key string) error {
-	dtl, v := &ctx.detail, &ctx.value
+	dtl := &ctx.detail
+
+	// dtl, v := &ctx.detail, &ctx.value
+	// elem := chaseValue(v.current.MapIndex(reflect.ValueOf(key)))
+	// println("  map element: ", elem)
+	// u.tryAssignElem(ctx, elem)
 
 	ctx.key.push(key)
 	dtl.current = unfoldWaitElem
-	elem := chaseValue(v.current.MapIndex(reflect.ValueOf(key)))
-	println("  map element: ", elem)
-	u.tryAssignElem(ctx, elem)
 	return nil
 }
 
@@ -167,6 +176,7 @@ func (u unfolderRefl) OnArrayStart(ctx *unfoldCtx, len int, baseType structform.
 		println("    kind: ", v.current.Kind())
 
 		st.push(unfoldArrayState)
+		ctx.unfolder.push(newUnfolderRefl())
 		dtl.push(unfoldWaitElem)
 		idx.push(0)
 
@@ -202,6 +212,7 @@ func (u unfolderRefl) OnArrayStart(ctx *unfoldCtx, len int, baseType structform.
 	println("    elem type: ", v.current.Type().Elem())
 
 	st.push(unfoldArrayState)
+	ctx.unfolder.push(newUnfolderRefl())
 	dtl.push(unfoldWaitElem)
 	idx.push(0)
 
@@ -236,7 +247,12 @@ func (u unfolderRefl) tryAssignElem(ctx *unfoldCtx, elem reflect.Value) {
 	switch elem.Kind() {
 	case reflect.Slice, reflect.Array:
 		if !elem.IsNil() {
+			if elem.Kind() == reflect.Slice && elem.CanAddr() {
+				elem.SetLen(0)
+			}
+
 			st.push(unfoldArrayState)
+			ctx.unfolder.push(newUnfolderRefl())
 			dtl.push(unfoldWaitStart)
 			v.push(elem)
 		}
@@ -245,6 +261,7 @@ func (u unfolderRefl) tryAssignElem(ctx *unfoldCtx, elem reflect.Value) {
 		println("try assign map")
 		if !elem.IsNil() {
 			st.push(unfoldMapState)
+			ctx.unfolder.push(newUnfolderRefl())
 			dtl.push(unfoldWaitStart)
 			v.push(elem)
 		}
@@ -255,6 +272,7 @@ func (u unfolderRefl) tryAssignElem(ctx *unfoldCtx, elem reflect.Value) {
 	case reflect.Interface:
 		if !elem.IsNil() && elem.CanSet() {
 			st.push(unfoldAssignState)
+			ctx.unfolder.push(newUnfolderRefl())
 			dtl.push(unfoldWaitElem)
 			v.push(elem)
 		}
@@ -272,6 +290,7 @@ func (u unfolderRefl) OnArrayFinished(ctx *unfoldCtx) error {
 		(st.current == unfoldAssignState && dtl.current == unfoldWaitElem)
 	if waitAssigned {
 		st.pop()
+		ctx.unfolder.pop()
 		dtl.pop()
 		v.pop()
 	}
@@ -279,6 +298,7 @@ func (u unfolderRefl) OnArrayFinished(ctx *unfoldCtx) error {
 	dtl.pop()
 	idx.pop()
 	st.pop()
+	ctx.unfolder.pop()
 	value := v.pop()
 	return u.onValue(ctx, value)
 
@@ -353,6 +373,10 @@ func (u unfolderRefl) intoMap(ctx *unfoldCtx, v reflect.Value) error {
 
 	default:
 		v = v.Convert(tElem)
+	}
+
+	if val.current.IsNil() {
+		val.current.Set(reflect.MakeMap(val.current.Type()))
 	}
 
 	k := reflect.ValueOf(key.pop())
@@ -532,4 +556,5 @@ func (u *unfoldCtx) printStacks() {
 	println("    value: ", u.value.stack, u.value.current)
 	println("    key: ", u.key.stack, u.key.current)
 	println("    idx: ", u.idx.stack, u.idx.current)
+	println("    unfolder: ", len(u.unfolder.stack)+1)
 }

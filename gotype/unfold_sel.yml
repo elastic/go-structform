@@ -6,37 +6,62 @@ data.types: [
     float32, float64
   ]
 
+data.withIfc: ${WITH_IFC:true}
+data.reflOnly: ${REFL_ONLY:false}
+
 main: |
   package gotype
+
   
   func (u *unfoldCtx) trySetGotypeTarget(to interface{}) bool {
-    switch ptr := to.(type) {
-
-    // primitives
-    {{ range .types }}
-    case *{{ . }}:
-      u.ptr.push(unsafe.Pointer(ptr))
-      u.unfolder.push(newUnfolder{{ . | capitalize }}())
-    {{ end }}
-
-    // arrays
-    {{ range .types }}
-    case *[]{{ . }}:
-      u.ptr.push(unsafe.Pointer(ptr))
-      u.detail.push(unfoldWaitStart)
-      u.unfolder.push(newUnfolderArr{{ . | capitalize }}())
-    {{ end }}
-
-    // maps
-    {{ range .types }}
-    case *map[string]{{ . }}:
-      u.ptr.push(unsafe.Pointer(ptr))
-      u.detail.push(unfoldWaitStart)
-      u.unfolder.push(newUnfolderMap{{ . | capitalize }}())
-    {{ end }}
-
-    default:
+    {{ if .reflOnly }}
       return false
-    }
-    return true
+    {{ else }}
+      switch ptr := to.(type) {
+
+      // primitives
+      {{ if .withIfc }}
+      case *interface{}:
+        u.ptr.push(unsafe.Pointer(ptr))
+        u.unfolder.push(newUnfolderIfc())
+      {{ end }}
+      {{ range .types }}
+      case *{{ . }}:
+        u.ptr.push(unsafe.Pointer(ptr))
+        u.unfolder.push(newUnfolder{{ . | capitalize }}())
+      {{ end }}
+
+      // arrays
+      {{ if .withIfc }}
+      case *[]interface{}:
+        u.ptr.push(unsafe.Pointer(ptr))
+        u.detail.push(unfoldWaitStart)
+        u.unfolder.push(newUnfolderArrIfc())
+      {{ end }}
+      {{ range .types }}
+      case *[]{{ . }}:
+        u.ptr.push(unsafe.Pointer(ptr))
+        u.detail.push(unfoldWaitStart)
+        u.unfolder.push(newUnfolderArr{{ . | capitalize }}())
+      {{ end }}
+
+      // maps
+      {{ if .withIfc }}
+      case *map[string]interface{}:
+        u.ptr.push(unsafe.Pointer(ptr))
+        u.detail.push(unfoldWaitStart)
+        u.unfolder.push(newUnfolderMapIfc())
+      {{ end }}
+      {{ range .types }}
+      case *map[string]{{ . }}:
+        u.ptr.push(unsafe.Pointer(ptr))
+        u.detail.push(unfoldWaitStart)
+        u.unfolder.push(newUnfolderMap{{ . | capitalize }}())
+      {{ end }}
+
+      default:
+        return false
+      }
+      return true
+    {{ end }}
   }

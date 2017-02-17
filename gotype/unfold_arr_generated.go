@@ -1,4 +1,4 @@
-// This file has been generated from 'unfol_arr.yml', do not edit
+// This file has been generated from 'unfold_arr.yml', do not edit
 package gotype
 
 import "github.com/urso/go-structform"
@@ -40,11 +40,15 @@ func (u *unfolderArrBool) OnArrayStart(ctx *unfoldCtx, l int, baseType structfor
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]bool)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]bool, l)
-		}
+	to := (*[]bool)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]bool, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -62,15 +66,19 @@ func (u *unfolderArrBool) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrBool) ptr(ctx *unfoldCtx) *[]bool {
+	return (*[]bool)(ctx.ptr.current)
+}
+
 func (u *unfolderArrBool) append(ctx *unfoldCtx, v bool) error {
 	idx := &ctx.idx
-	to := (*[]bool)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -112,11 +120,15 @@ func (u *unfolderArrString) OnArrayStart(ctx *unfoldCtx, l int, baseType structf
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]string)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]string, l)
-		}
+	to := (*[]string)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]string, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -134,15 +146,19 @@ func (u *unfolderArrString) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrString) ptr(ctx *unfoldCtx) *[]string {
+	return (*[]string)(ctx.ptr.current)
+}
+
 func (u *unfolderArrString) append(ctx *unfoldCtx, v string) error {
 	idx := &ctx.idx
-	to := (*[]string)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -184,11 +200,15 @@ func (u *unfolderArrUint) OnArrayStart(ctx *unfoldCtx, l int, baseType structfor
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]uint)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]uint, l)
-		}
+	to := (*[]uint)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]uint, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -206,15 +226,19 @@ func (u *unfolderArrUint) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrUint) ptr(ctx *unfoldCtx) *[]uint {
+	return (*[]uint)(ctx.ptr.current)
+}
+
 func (u *unfolderArrUint) append(ctx *unfoldCtx, v uint) error {
 	idx := &ctx.idx
-	to := (*[]uint)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -256,11 +280,15 @@ func (u *unfolderArrUint8) OnArrayStart(ctx *unfoldCtx, l int, baseType structfo
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]uint8)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]uint8, l)
-		}
+	to := (*[]uint8)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]uint8, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -278,15 +306,19 @@ func (u *unfolderArrUint8) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrUint8) ptr(ctx *unfoldCtx) *[]uint8 {
+	return (*[]uint8)(ctx.ptr.current)
+}
+
 func (u *unfolderArrUint8) append(ctx *unfoldCtx, v uint8) error {
 	idx := &ctx.idx
-	to := (*[]uint8)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -328,11 +360,15 @@ func (u *unfolderArrUint16) OnArrayStart(ctx *unfoldCtx, l int, baseType structf
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]uint16)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]uint16, l)
-		}
+	to := (*[]uint16)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]uint16, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -350,15 +386,19 @@ func (u *unfolderArrUint16) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrUint16) ptr(ctx *unfoldCtx) *[]uint16 {
+	return (*[]uint16)(ctx.ptr.current)
+}
+
 func (u *unfolderArrUint16) append(ctx *unfoldCtx, v uint16) error {
 	idx := &ctx.idx
-	to := (*[]uint16)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -400,11 +440,15 @@ func (u *unfolderArrUint32) OnArrayStart(ctx *unfoldCtx, l int, baseType structf
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]uint32)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]uint32, l)
-		}
+	to := (*[]uint32)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]uint32, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -422,15 +466,19 @@ func (u *unfolderArrUint32) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrUint32) ptr(ctx *unfoldCtx) *[]uint32 {
+	return (*[]uint32)(ctx.ptr.current)
+}
+
 func (u *unfolderArrUint32) append(ctx *unfoldCtx, v uint32) error {
 	idx := &ctx.idx
-	to := (*[]uint32)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -472,11 +520,15 @@ func (u *unfolderArrUint64) OnArrayStart(ctx *unfoldCtx, l int, baseType structf
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]uint64)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]uint64, l)
-		}
+	to := (*[]uint64)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]uint64, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -494,15 +546,19 @@ func (u *unfolderArrUint64) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrUint64) ptr(ctx *unfoldCtx) *[]uint64 {
+	return (*[]uint64)(ctx.ptr.current)
+}
+
 func (u *unfolderArrUint64) append(ctx *unfoldCtx, v uint64) error {
 	idx := &ctx.idx
-	to := (*[]uint64)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -544,11 +600,15 @@ func (u *unfolderArrInt) OnArrayStart(ctx *unfoldCtx, l int, baseType structform
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]int)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]int, l)
-		}
+	to := (*[]int)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]int, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -566,15 +626,19 @@ func (u *unfolderArrInt) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrInt) ptr(ctx *unfoldCtx) *[]int {
+	return (*[]int)(ctx.ptr.current)
+}
+
 func (u *unfolderArrInt) append(ctx *unfoldCtx, v int) error {
 	idx := &ctx.idx
-	to := (*[]int)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -616,11 +680,15 @@ func (u *unfolderArrInt8) OnArrayStart(ctx *unfoldCtx, l int, baseType structfor
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]int8)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]int8, l)
-		}
+	to := (*[]int8)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]int8, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -638,15 +706,19 @@ func (u *unfolderArrInt8) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrInt8) ptr(ctx *unfoldCtx) *[]int8 {
+	return (*[]int8)(ctx.ptr.current)
+}
+
 func (u *unfolderArrInt8) append(ctx *unfoldCtx, v int8) error {
 	idx := &ctx.idx
-	to := (*[]int8)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -688,11 +760,15 @@ func (u *unfolderArrInt16) OnArrayStart(ctx *unfoldCtx, l int, baseType structfo
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]int16)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]int16, l)
-		}
+	to := (*[]int16)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]int16, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -710,15 +786,19 @@ func (u *unfolderArrInt16) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrInt16) ptr(ctx *unfoldCtx) *[]int16 {
+	return (*[]int16)(ctx.ptr.current)
+}
+
 func (u *unfolderArrInt16) append(ctx *unfoldCtx, v int16) error {
 	idx := &ctx.idx
-	to := (*[]int16)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -760,11 +840,15 @@ func (u *unfolderArrInt32) OnArrayStart(ctx *unfoldCtx, l int, baseType structfo
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]int32)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]int32, l)
-		}
+	to := (*[]int32)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]int32, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -782,15 +866,19 @@ func (u *unfolderArrInt32) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrInt32) ptr(ctx *unfoldCtx) *[]int32 {
+	return (*[]int32)(ctx.ptr.current)
+}
+
 func (u *unfolderArrInt32) append(ctx *unfoldCtx, v int32) error {
 	idx := &ctx.idx
-	to := (*[]int32)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -832,11 +920,15 @@ func (u *unfolderArrInt64) OnArrayStart(ctx *unfoldCtx, l int, baseType structfo
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]int64)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]int64, l)
-		}
+	to := (*[]int64)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]int64, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -854,15 +946,19 @@ func (u *unfolderArrInt64) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrInt64) ptr(ctx *unfoldCtx) *[]int64 {
+	return (*[]int64)(ctx.ptr.current)
+}
+
 func (u *unfolderArrInt64) append(ctx *unfoldCtx, v int64) error {
 	idx := &ctx.idx
-	to := (*[]int64)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -904,11 +1000,15 @@ func (u *unfolderArrFloat32) OnArrayStart(ctx *unfoldCtx, l int, baseType struct
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]float32)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]float32, l)
-		}
+	to := (*[]float32)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]float32, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -926,15 +1026,19 @@ func (u *unfolderArrFloat32) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrFloat32) ptr(ctx *unfoldCtx) *[]float32 {
+	return (*[]float32)(ctx.ptr.current)
+}
+
 func (u *unfolderArrFloat32) append(ctx *unfoldCtx, v float32) error {
 	idx := &ctx.idx
-	to := (*[]float32)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }
@@ -976,11 +1080,15 @@ func (u *unfolderArrFloat64) OnArrayStart(ctx *unfoldCtx, l int, baseType struct
 		return errUnexpectedArrayStart
 	}
 
-	if l > 0 {
-		to := (*[]float64)(ctx.ptr.current)
-		if *to == nil {
-			*to = make([]float64, l)
-		}
+	to := (*[]float64)(ctx.ptr.current)
+	if l < 0 {
+		l = 0
+	}
+
+	if *to == nil && l > 0 {
+		*to = make([]float64, l)
+	} else if l < len(*to) {
+		*to = (*to)[:l]
 	}
 
 	dtl.current = unfoldWaitElem
@@ -998,15 +1106,19 @@ func (u *unfolderArrFloat64) OnArrayFinished(ctx *unfoldCtx) error {
 	return nil
 }
 
+func (u *unfolderArrFloat64) ptr(ctx *unfoldCtx) *[]float64 {
+	return (*[]float64)(ctx.ptr.current)
+}
+
 func (u *unfolderArrFloat64) append(ctx *unfoldCtx, v float64) error {
 	idx := &ctx.idx
-	to := (*[]float64)(ctx.ptr.current)
-
+	to := u.ptr(ctx)
 	if len(*to) <= idx.current {
 		*to = append(*to, v)
 	} else {
 		(*to)[idx.current] = v
 	}
+
 	idx.current++
 	return nil
 }

@@ -64,14 +64,16 @@ var unfoldSamples = []struct {
 	{`[]`, []interface{}{}, &[]struct{ A string }{}},
 	{`[1,2,3]`, []uint8{1, 2, 3}, new(interface{})},
 	{`[1,2,3]`, []uint8{1, 2, 3}, &[]uint8{0, 0, 0}},
+	{`[1,2,3]`, []uint8{1, 2, 3}, &[]uint8{0, 0, 0, 4}},
 	{`[1,2,3]`, []uint8{1, 2, 3}, &[]uint8{}},
 	{`[1,2,3]`, []interface{}{1, 2, 3}, &[]uint8{}},
 	{`[1,2,3]`, []interface{}{1, 2, 3}, new([]uint8)},
 	{`[1,2,3]`, []int{1, 2, 3}, &[]interface{}{}},
-	{`[1,2,3]`, []int{1, 2, 3}, &[]interface{}{nil, nil, nil}},
-	{`[1,2,3]`, []uint8{1}, &[]uint8{0, 2, 3}},
-	{`[1,2,3]`, []uint8{1, 2}, &[]uint8{0, 0, 3}},
-	{`[1,2,3]`, []interface{}{1, 2}, &[]uint{0, 0, 3}},
+	{`[1,2,3]`, []int{1, 2, 3}, &[]interface{}{nil, nil, nil, 4}},
+	{`[1]`, []uint8{1}, &[]uint8{0, 2, 3}},
+	{`[1,2]`, []uint8{1, 2}, &[]uint8{0, 0, 3}},
+	{`[1,2]`, []interface{}{1, 2}, &[]uint{0, 0, 3}},
+	{`[1,2]`, []interface{}{1, 2}, &[]interface{}{0, 0, 3}},
 	{`["a","b"]`, []string{"a", "b"}, &[]interface{}{}},
 	{`["a","b"]`, []string{"a", "b"}, &[]interface{}{nil, nil}},
 	{`["a","b"]`, []string{"a", "b"}, &[]string{}},
@@ -87,22 +89,22 @@ var unfoldSamples = []struct {
 
 	// nested arrays
 	{`[[]]`, []interface{}{[]uint{}}, new(interface{})},
-	{`[[1]]`, []interface{}{}, &[]interface{}{[]interface{}{1}}},
-	{`[[1]]`, []interface{}{}, &[][]int{{1}}},
+	{`[]`, []interface{}{}, &[]interface{}{[]interface{}{1}}},
+	{`[]`, []interface{}{}, &[][]int{{1}}},
 	{`[[1]]`, []interface{}{[]interface{}{1}}, &[][]int{}},
 	{`[[1,2,3],[4,5,6]]`,
 		[]interface{}{[]interface{}{1, 2, 3}, []interface{}{4, 5, 6}},
 		new(interface{})},
-	{`[[1,2,3],[4]]`,
+	{`[[1],[4]]`,
 		[]interface{}{[]interface{}{1}, []interface{}{4}},
 		&[]interface{}{[]interface{}{0, 2, 3}}},
-	{`[[1,2,3],[4,5],[6]]`,
+	{`[[1],[4],[6]]`,
 		[]interface{}{[]interface{}{1}, []interface{}{4}, []interface{}{6}},
 		&[]interface{}{
 			[]interface{}{0, 2, 3},
 			[]interface{}{0, 5},
 		}},
-	{`[[1,2,3],[4,5],[6]]`,
+	{`[[1],[4],[6]]`,
 		[]interface{}{[]interface{}{1}, []interface{}{4}, []interface{}{6}},
 		&[][]int{
 			{0, 2, 3},
@@ -154,14 +156,14 @@ var unfoldSamples = []struct {
 			"1": {"e": 5, "f": 6},
 		},
 		&map[string]map[string]int64{}},
-	{`{"0":{"a":1,"b":2,"c":3}}`,
+	{`{"0":{"a":1}}`,
 		map[string]map[string]int{
 			"0": {"a": 1},
 		},
 		&map[string]interface{}{
 			"0": map[string]int{"b": 2, "c": 3},
 		}},
-	{`{"0":{"a":1,"b":2,"c":3},"1":{"e":5,"f":6}}`,
+	{`{"0":{"a":1},"1":{"e":5}}`,
 		map[string]map[string]int{
 			"0": {"a": 1},
 			"1": {"e": 5},
@@ -170,7 +172,7 @@ var unfoldSamples = []struct {
 			"0": map[string]int{"b": 2, "c": 3},
 			"1": map[string]interface{}{"f": 6, "e": 0},
 		}},
-	{`{"0":{"a":1,"b":2,"c":3},"1":{"e":5,"f":6}}`,
+	{`{"0":{"a":1},"1":{"e":5}}`,
 		map[string]map[string]int{
 			"0": {"a": 1},
 			"1": {"e": 5},
@@ -184,9 +186,10 @@ var unfoldSamples = []struct {
 	{`[{}]`, []interface{}{map[string]interface{}{}}, new(interface{})},
 	{`[{}]`, []interface{}{map[string]interface{}{}}, &[]map[string]int{}},
 	{`[{"a":1}]`, []map[string]int{{"a": 1}}, new(interface{})},
+	{`[{"a":1}]`, []map[string]int{{"a": 1}}, &[]interface{}{}},
 	{`[{"a":1}]`, []map[string]int{{"a": 1}}, &[]map[string]interface{}{}},
 	{`[{"a":1}]`, []map[string]int{{"a": 1}}, &[]map[string]interface{}{{"a": 2}}},
-	{`[{"a":1,"b":2}]`, []map[string]int{{"a": 1}}, &[]map[string]int{{"b": 2}}},
+	{`[{"a":1}]`, []map[string]int{{"a": 1}}, &[]map[string]int{{"b": 2}}},
 	{`[{"a":1},{"b":2}]`, []map[string]int{{"a": 1}, {"b": 2}}, &[]map[string]int{}},
 	{`[{"a":1},{"b":"b"},{"c":true}]`,
 		[]map[string]interface{}{{"a": 1}, {"b": "b"}, {"c": true}},
@@ -264,6 +267,39 @@ func TestFoldUnfoldConsistent(t *testing.T) {
 	}
 }
 
+func TestUnfoldJsonInto(t *testing.T) {
+	tests := unfoldSamples
+	for i, test := range tests {
+		t.Logf("run test (%v): %v (%T -> %T)", i, test.json, test.input, test.value)
+
+		un, err := NewUnfolder(test.value)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		dec := json.NewParser(un)
+		input := test.json
+
+		err = dec.ParseString(input)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		// check state valid by processing a second time
+		if err = un.setTarget(test.value); err != nil {
+			t.Error(err)
+			continue
+		}
+
+		err = dec.ParseString(input)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+	}
+}
+
 func BenchmarkUnfoldJsonInto(b *testing.B) {
 	tests := unfoldSamples
 	for i, test := range tests {
@@ -283,6 +319,12 @@ func BenchmarkUnfoldJsonInto(b *testing.B) {
 
 		dec := json.NewParser(un)
 		input := test.json
+		// parse once to reset state for use of 'setTarget' in benchmark
+		if err := dec.ParseString(input); err != nil {
+			b.Error(err)
+			continue
+		}
+
 		b.Run(name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				un.setTarget(test.value)
@@ -290,6 +332,7 @@ func BenchmarkUnfoldJsonInto(b *testing.B) {
 				if err != nil {
 					b.Error(err)
 				}
+
 			}
 		})
 	}

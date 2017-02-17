@@ -4,9 +4,14 @@ package gotype
 import "unsafe"
 
 func (u *unfoldCtx) trySetGotypeTarget(to interface{}) bool {
+
 	switch ptr := to.(type) {
 
 	// primitives
+
+	case *interface{}:
+		u.ptr.push(unsafe.Pointer(ptr))
+		u.unfolder.push(newUnfolderIfc())
 
 	case *bool:
 		u.ptr.push(unsafe.Pointer(ptr))
@@ -65,6 +70,11 @@ func (u *unfoldCtx) trySetGotypeTarget(to interface{}) bool {
 		u.unfolder.push(newUnfolderFloat64())
 
 	// arrays
+
+	case *[]interface{}:
+		u.ptr.push(unsafe.Pointer(ptr))
+		u.detail.push(unfoldWaitStart)
+		u.unfolder.push(newUnfolderArrIfc())
 
 	case *[]bool:
 		u.ptr.push(unsafe.Pointer(ptr))
@@ -137,6 +147,11 @@ func (u *unfoldCtx) trySetGotypeTarget(to interface{}) bool {
 		u.unfolder.push(newUnfolderArrFloat64())
 
 	// maps
+
+	case *map[string]interface{}:
+		u.ptr.push(unsafe.Pointer(ptr))
+		u.detail.push(unfoldWaitStart)
+		u.unfolder.push(newUnfolderMapIfc())
 
 	case *map[string]bool:
 		u.ptr.push(unsafe.Pointer(ptr))
@@ -212,4 +227,5 @@ func (u *unfoldCtx) trySetGotypeTarget(to interface{}) bool {
 		return false
 	}
 	return true
+
 }

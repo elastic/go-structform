@@ -43,12 +43,17 @@ templates.makeType: |
       return errUnexpectedArrayStart
     }
 
-    if l > 0 {
-      to := (*[]{{ $type }})(ctx.ptr.current)
-      if *to == nil {
-        *to = make([]{{ $type }}, l)
-      }
+    to := (*[]{{ $type }})(ctx.ptr.current)
+    if l < 0 {
+      l = 0
     }
+
+    if *to == nil && l > 0 {
+      *to = make([]{{ $type }}, l)
+    } else if l < len(*to) {
+      *to = (*to)[:l]
+    }
+
 
     dtl.current = unfoldWaitElem
     ctx.idx.push(0)
@@ -65,15 +70,19 @@ templates.makeType: |
     return nil
   }
 
+  func (u *{{ $name }} ) ptr(ctx *unfoldCtx) *[]{{ $type }} {
+    return (*[]{{ $type }})(ctx.ptr.current)
+  }
+
   func (u *{{ $name }} ) append(ctx *unfoldCtx, v {{ $type }}) error {
     idx := &ctx.idx
-    to := (*[]{{ $type }})(ctx.ptr.current)
-
+    to := u.ptr(ctx)
     if len(*to) <= idx.current {
       *to = append(*to, v)
     } else {
       (*to)[idx.current] = v
     }
+
     idx.current++
     return nil
   }

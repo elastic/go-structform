@@ -17,7 +17,7 @@ main: |
     {{ template "makeType" . }}
   {{ end }}
 
-  {{/* create visitor callbacks */}}
+  {{/* create value visitor callbacks */}}
   {{ invoke "onBool" "name" "unfolderBool" "fn" "assign" }}
   {{ invoke "onString" "name" "unfolderString" "fn" "assign" }}
   {{ range .numTypes }}
@@ -32,12 +32,13 @@ templates.makeType: |
   {{ $name := capitalize . | printf "unfolder%v" }}
   {{ invoke "makeUnfoldType" "type" $type "name" $name }}
 
-  func (u *{{ $name }}) assign(ctx *unfoldCtx, v {{ $type }}) error {
-    // *u.to = v
-    u.free()
+  func (u *{{ $name }} ) ptr(ctx *unfoldCtx) *{{ $type }} {
+    return (*{{ $type }})(ctx.ptr.current)
+  }
 
-    to := (*{{ $type }})(ctx.ptr.current)
-    *to = v
+  func (u *{{ $name }}) assign(ctx *unfoldCtx, v {{ $type }}) error {
+    *u.ptr(ctx) = v
+    u.free()
 
     ctx.unfolder.pop()
     ctx.ptr.pop()

@@ -23,6 +23,7 @@ type unfoldCtx struct {
 	state  unfoldStateStack
 	detail unfoldStateDetailStack
 
+	baseType structTypeStack
 	unfolder unfolderStack
 	ptr      ptrStack
 }
@@ -84,6 +85,16 @@ func NewUnfolder(to interface{}) (*Unfolder, error) {
 		tag: "struct",
 	}
 
+	// init processing stacks
+	u.value.init(reflect.Value{})
+	u.key.init()
+	u.baseType.init(structform.AnyType)
+	u.idx.init()
+	u.ptr.init()
+	u.state.init(unfoldStartState)
+	u.detail.init(unfoldWaitElem)
+	u.unfolder.init(nil)
+
 	if err := u.setTarget(to); err != nil {
 		return nil, err
 	}
@@ -94,14 +105,6 @@ func (u *Unfolder) setTarget(to interface{}) error {
 	if to == nil {
 		return errNilInput
 	}
-
-	// init processing stacks
-	u.value.init(reflect.Value{})
-	u.key.init()
-	u.idx.init()
-	u.ptr.init()
-	u.state.init(unfoldStartState)
-	u.detail.init(unfoldWaitElem)
 
 	if u.trySetGotypeTarget(to) {
 		return nil
@@ -132,6 +135,9 @@ func (u *Unfolder) setTarget(to interface{}) error {
 
 	case reflect.Array, reflect.Slice:
 		state0 = unfoldArrayState
+		if k == reflect.Slice && !vTo.IsNil() {
+			vTo.SetLen(0)
+		}
 
 	case reflect.Interface:
 		if tTo == tInterface {
@@ -146,6 +152,7 @@ func (u *Unfolder) setTarget(to interface{}) error {
 	u.detail.push(detail0)
 
 	u.unfolder.init(newUnfolderRefl())
+	u.unfolder.push(newUnfolderRefl())
 	u.value.push(vTo)
 
 	// u.unfoldCtx.setUnfoldGoTypes(to)
@@ -158,7 +165,18 @@ func (u *unfoldCtx) OnObjectStart(len int, baseType structform.BaseType) error {
 }
 
 func (u *unfoldCtx) OnObjectFinished() error {
-	return u.unfolder.current.OnObjectFinished(u)
+	lBefore := len(u.unfolder.stack) + 1
+
+	if err := u.unfolder.current.OnObjectFinished(u); err != nil {
+		return err
+	}
+
+	lAfter := len(u.unfolder.stack) + 1
+	if old := u.unfolder.current; old != nil && lBefore != lAfter {
+		return old.OnChildObjectDone(u)
+	}
+
+	return nil
 }
 
 func (u *unfoldCtx) OnKey(s string) error {
@@ -170,7 +188,18 @@ func (u *unfoldCtx) OnArrayStart(len int, baseType structform.BaseType) error {
 }
 
 func (u *unfoldCtx) OnArrayFinished() error {
-	return u.unfolder.current.OnArrayFinished(u)
+	lBefore := len(u.unfolder.stack) + 1
+
+	if err := u.unfolder.current.OnArrayFinished(u); err != nil {
+		return err
+	}
+
+	lAfter := len(u.unfolder.stack) + 1
+	if old := u.unfolder.current; old != nil && lBefore != lAfter {
+		return old.OnChildArrayDone(u)
+	}
+
+	return nil
 }
 
 func (u *unfoldCtx) OnNil() error {

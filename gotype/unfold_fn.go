@@ -6,7 +6,6 @@ import (
 	"github.com/urso/go-structform"
 )
 
-// type reUnfoldFn func(u *Unfolder, sig unfoldSignal) error
 type reUnfoldEmpty struct{}
 
 type reUnfoldStruct struct {
@@ -35,41 +34,19 @@ type unfolder interface {
 	// array types
 	OnArrayStart(*unfoldCtx, int, structform.BaseType) error
 	OnArrayFinished(*unfoldCtx) error
+	OnChildArrayDone(*unfoldCtx) error
 
 	// object types
 	OnObjectStart(*unfoldCtx, int, structform.BaseType) error
 	OnObjectFinished(*unfoldCtx) error
 	OnKey(*unfoldCtx, string) error
+	OnChildObjectDone(*unfoldCtx) error
 }
-
-type unfoldSignal uint8
 
 var errNotSUpported = errors.New("not supported")
 
-//go:generate stringer -type=unfoldSignal
-const (
-	sigObjectStart unfoldSignal = iota
-	sigObjectFinished
-	sigObjectKey
-	sigArrayStart
-	sigArrayFinished
-	sigNil
-	sigBool
-	sigString
-	sigInt8
-	sigInt16
-	sigInt32
-	sigInt64
-	sigInt
-	sigByte
-	sigUint8
-	sigUint16
-	sigUint32
-	sigUint64
-	sigUint
-	sigFloat32
-	sigFloat64
-)
+func (reUnfoldEmpty) OnChildArrayDone(_ *unfoldCtx) error  { return errNotSUpported }
+func (reUnfoldEmpty) OnChildObjectDone(_ *unfoldCtx) error { return errNotSUpported }
 
 func (reUnfoldEmpty) OnObjectStart(_ *unfoldCtx, _ int, _ structform.BaseType) error {
 	return errNotSUpported
