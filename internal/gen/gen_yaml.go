@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"flag"
@@ -31,6 +32,7 @@ func main() {
 func run() error {
 	to := flag.String("o", "", "write to")
 	format := flag.Bool("f", false, "format output using goimports")
+	dataFile := flag.String("d", "", "input data file for use to fill out")
 
 	flag.Parse()
 	args := flag.Args()
@@ -38,20 +40,25 @@ func run() error {
 		return errors.New("Missing input file")
 	}
 
-	cfg, err := yaml.NewConfigWithFile(args[0], cfgOpts...)
+	userData, err := loadData(*dataFile)
 	if err != nil {
-		return fmt.Errorf("Failed to read file with: %v", err)
+		return fmt.Errorf("Failed to read data file: %v", err)
 	}
 
 	gen := struct {
 		Import    []string
 		Templates map[string]string
-		Data      interface{}
 		Main      string
 	}{}
+	if err = loadConfigInto(args[0], &gen); err != nil {
+		return err
+	}
 
-	if err := cfg.Unpack(&gen, cfgOpts...); err != nil {
-		return fmt.Errorf("Parsing template file failed with %v", err)
+	dat := struct {
+		Data interface{}
+	}{}
+	if err = loadConfigInto(args[0], &dat, ucfg.VarExp); err != nil {
+		return err
 	}
 
 	var T *template.Template
@@ -62,17 +69,8 @@ func run() error {
 		"isnil": func(v interface{}) bool {
 			return v == nil
 		},
-		"dict": makeDict,
-		"invoke": func(name string, values ...interface{}) (string, error) {
-			params, err := makeDict(values...)
-			if err != nil {
-				return "", err
-			}
-
-			var buf bytes.Buffer
-			err = T.ExecuteTemplate(&buf, name, params)
-			return buf.String(), err
-		},
+		"dict":   makeDict,
+		"invoke": makeInvokeCommand(&T), // invoke another template with named parameters
 	}
 
 	T, err = loadTemplates(template.New("").Funcs(defaultFuncs), gen.Import)
@@ -94,7 +92,20 @@ func run() error {
 		return fmt.Errorf("Parsing 'template' fields failed with %v", err)
 	}
 
-	if err := T.Execute(&buf, gen.Data); err != nil {
+	var data interface{}
+	switch {
+	case userData == nil && dat.Data != nil:
+		data = dat.Data
+	case userData != nil && dat.Data == nil:
+		data = userData
+	case userData != nil && dat.Data != nil:
+		data = map[string]interface{}{
+			"config":   userData,
+			"template": dat.Data,
+		}
+	}
+
+	if err := T.Execute(&buf, data); err != nil {
 		return fmt.Errorf("executing template failed with %v", err)
 	}
 
@@ -121,13 +132,9 @@ func loadTemplates(T *template.Template, files []string) (*template.Template, er
 			Templates map[string]string
 		}{}
 
-		cfg, err := yaml.NewConfigWithFile(file, cfgOpts...)
+		err := loadConfigInto(file, &gen)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to read template file %v: %v", file, err)
-		}
-
-		if err := cfg.Unpack(&gen, cfgOpts...); err != nil {
-			return nil, fmt.Errorf("Parsing template file %v failed with %v", file, err)
+			return nil, err
 		}
 
 		T, err = loadTemplates(T, gen.Import)
@@ -158,6 +165,31 @@ func addTemplates(T *template.Template, templates map[string]string) (*template.
 	return T, nil
 }
 
+func loadConfig(file string, extraOpts ...ucfg.Option) (cfg *ucfg.Config, err error) {
+	opts := append(append([]ucfg.Option{}, extraOpts...), cfgOpts...)
+	cfg, err = yaml.NewConfigWithFile(file, opts...)
+	if err != nil {
+		err = fmt.Errorf("Failed to read file %v with: %v", file, err)
+	}
+	return
+}
+
+func loadConfigInto(file string, to interface{}, extraOpts ...ucfg.Option) error {
+	cfg, err := loadConfig(file, extraOpts...)
+	if err == nil {
+		err = readConfig(cfg, to, extraOpts...)
+	}
+	return err
+}
+
+func readConfig(cfg *ucfg.Config, to interface{}, extraOpts ...ucfg.Option) error {
+	opts := append(append([]ucfg.Option{}, extraOpts...), cfgOpts...)
+	if err := cfg.Unpack(to, opts...); err != nil {
+		return fmt.Errorf("Parsing template file failed with %v", err)
+	}
+	return nil
+}
+
 func makeDict(values ...interface{}) (map[string]interface{}, error) {
 	if len(values)%2 != 0 {
 		return nil, errors.New("invalid dict call")
@@ -172,4 +204,69 @@ func makeDict(values ...interface{}) (map[string]interface{}, error) {
 		dict[key] = values[i+1]
 	}
 	return dict, nil
+}
+
+func makeInvokeCommand(T **template.Template) func(string, ...interface{}) (string, error) {
+	return func(name string, values ...interface{}) (string, error) {
+		params, err := makeDict(values...)
+		if err != nil {
+			return "", err
+		}
+
+		var buf bytes.Buffer
+		err = (*T).ExecuteTemplate(&buf, name, params)
+		return buf.String(), err
+
+	}
+}
+
+func loadData(file string) (map[string]string, error) {
+	if file == "" {
+		return nil, nil
+	}
+
+	meta := struct {
+		Entries map[string]struct {
+			Default     string
+			Description string
+		} `config:",inline"`
+	}{}
+
+	err := loadConfigInto(file, &meta, ucfg.VarExp)
+	if err != nil {
+		return nil, err
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+
+	state := map[string]string{}
+	for name, entry := range meta.Entries {
+		// parse default value
+		T, err := template.New("").Parse(entry.Default)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse data entry %v: %v", name, err)
+		}
+
+		var buf bytes.Buffer
+		if err := T.Execute(&buf, state); err != nil {
+			return nil, fmt.Errorf("Failed to evaluate data entry %v: %v", name, err)
+		}
+
+		// ask user for input
+		defaultValue := buf.String()
+		fmt.Printf("%v\n%v [%v]: ", entry.Description, name, defaultValue)
+		value, err := reader.ReadString('\n')
+		if err != nil {
+			return nil, fmt.Errorf("Error waiting for user input: %v", err)
+		}
+
+		value = strings.TrimSpace(value)
+		if value == "" {
+			value = defaultValue
+		}
+
+		state[name] = value
+	}
+
+	return state, nil
 }
