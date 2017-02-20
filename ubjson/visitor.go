@@ -137,8 +137,8 @@ func (vs *Visitor) int8(i int8, marker bool) error {
 }
 
 func (vs *Visitor) OnInt16(i int16) error {
-	if math.MinInt8 < i && i < math.MaxInt8 {
-		return vs.OnInt8(int8(i))
+	if math.MinInt8 <= i && i <= math.MaxInt8 {
+		return vs.int8(int8(i), true)
 	}
 	return vs.int16(i, true)
 }
@@ -154,7 +154,7 @@ func (vs *Visitor) int16(i int16, marker bool) error {
 }
 
 func (vs *Visitor) OnInt32(i int32) error {
-	if math.MinInt16 < i && i < math.MaxInt16 {
+	if math.MinInt16 <= i && i <= math.MaxInt16 {
 		return vs.OnInt16(int16(i))
 	}
 	return vs.int32(i, true)
@@ -171,7 +171,7 @@ func (vs *Visitor) int32(i int32, marker bool) error {
 }
 
 func (vs *Visitor) OnInt64(i int64) error {
-	if math.MinInt32 < i && i < math.MaxInt32 {
+	if math.MinInt32 <= i && i <= math.MaxInt32 {
 		return vs.OnInt32(int32(i))
 	}
 	return vs.int64(i, true)
