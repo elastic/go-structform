@@ -78,6 +78,12 @@ func run() error {
 		"isnil": func(v interface{}) bool {
 			return v == nil
 		},
+		"default": func(D, v interface{}) interface{} {
+			if v == nil {
+				return D
+			}
+			return v
+		},
 		"dict":   makeDict,
 		"invoke": makeInvokeCommand(&T), // invoke another template with named parameters
 	}
