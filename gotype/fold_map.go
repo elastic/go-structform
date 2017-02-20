@@ -51,57 +51,57 @@ func foldMapInterface(C *foldContext, v interface{}) error {
 }
 
 func foldMapBool(C *foldContext, v interface{}) error {
-	return C.OnBoolObject(v.(map[string]bool))
+	return C.visitor.OnBoolObject(v.(map[string]bool))
 }
 
 func foldMapString(C *foldContext, v interface{}) error {
-	return C.OnStringObject(v.(map[string]string))
+	return C.visitor.OnStringObject(v.(map[string]string))
 }
 
 func foldMapInt8(C *foldContext, v interface{}) error {
-	return C.OnInt8Object(v.(map[string]int8))
+	return C.visitor.OnInt8Object(v.(map[string]int8))
 }
 
 func foldMapInt16(C *foldContext, v interface{}) error {
-	return C.OnInt16Object(v.(map[string]int16))
+	return C.visitor.OnInt16Object(v.(map[string]int16))
 }
 
 func foldMapInt32(C *foldContext, v interface{}) error {
-	return C.OnInt32Object(v.(map[string]int32))
+	return C.visitor.OnInt32Object(v.(map[string]int32))
 }
 
 func foldMapInt64(C *foldContext, v interface{}) error {
-	return C.OnInt64Object(v.(map[string]int64))
+	return C.visitor.OnInt64Object(v.(map[string]int64))
 }
 
 func foldMapInt(C *foldContext, v interface{}) error {
-	return C.OnIntObject(v.(map[string]int))
+	return C.visitor.OnIntObject(v.(map[string]int))
 }
 
 func foldMapUint8(C *foldContext, v interface{}) error {
-	return C.OnUint8Object(v.(map[string]uint8))
+	return C.visitor.OnUint8Object(v.(map[string]uint8))
 }
 
 func foldMapUint16(C *foldContext, v interface{}) error {
-	return C.OnUint16Object(v.(map[string]uint16))
+	return C.visitor.OnUint16Object(v.(map[string]uint16))
 }
 
 func foldMapUint32(C *foldContext, v interface{}) error {
-	return C.OnUint32Object(v.(map[string]uint32))
+	return C.visitor.OnUint32Object(v.(map[string]uint32))
 }
 
 func foldMapUint64(C *foldContext, v interface{}) error {
-	return C.OnUint64Object(v.(map[string]uint64))
+	return C.visitor.OnUint64Object(v.(map[string]uint64))
 }
 
 func foldMapUint(C *foldContext, v interface{}) error {
-	return C.OnUintObject(v.(map[string]uint))
+	return C.visitor.OnUintObject(v.(map[string]uint))
 }
 
 func foldMapFloat32(C *foldContext, v interface{}) error {
-	return C.OnFloat32Object(v.(map[string]float32))
+	return C.visitor.OnFloat32Object(v.(map[string]float32))
 }
 
 func foldMapFloat64(C *foldContext, v interface{}) error {
-	return C.OnFloat64Object(v.(map[string]float64))
+	return C.visitor.OnFloat64Object(v.(map[string]float64))
 }

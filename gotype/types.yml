@@ -14,7 +14,7 @@ data.primitiveTypes: [
 
 data.mapTypes:
   AnyType: 'interface{}'
-  ByteType: byte
+  ByteType: uint8
   StringType: string
   BoolType: bool
   ZeroType: 'interface{}'
@@ -29,7 +29,7 @@ data.mapTypes:
   Uint32Type: uint32
   Uint64Type: uint64
   Float32Type: float32
-Float64Type: float64
+  Float64Type: float64
 
 data.mapReflTypes:
   AnyType: tInterface

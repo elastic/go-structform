@@ -6,8 +6,17 @@ main: |
 
   import "github.com/urso/go-structform"
 
-  {{/* define types */}}
-  {{ invoke "makeTypeWithName" "name" "Ifc" "type" "interface{}" "makeSubObject" "unfoldIfcStartSubMap" }}
+  {{/* defined 'lifted' pointer map unfolders into reflection based unfolders */}}
+  var (
+    unfolderReflMapIfc = liftGoUnfolder(newUnfolderMapIfc())
+    {{ range data.primitiveTypes }}
+    {{ $t := capitalize . }}
+      unfolderReflMap{{ $t }} = liftGoUnfolder(newUnfolderMap{{ $t }}())
+    {{ end }}
+  )
+
+  {{/* define pointer based unfolder types */}}
+  {{ invoke "makeTypeWithName" "name" "Ifc" "type" "interface{}" }}
   {{ template "makeType" "bool" }}
   {{ template "makeType" "string" }}
   {{ range .numTypes }}
@@ -24,22 +33,77 @@ main: |
     {{ invoke "onNumberFns" "name" $name "type" $type "fn" "put" }}
   {{ end }}
 
-  func unfoldIfcStartSubMap(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
-    tmp := makeMapPtr(ctx, l, baseType)
-    if !ctx.trySetGotypeTarget(tmp) {
-      // use reflection
-      v := reflect.ValueOf(tmp)
-      ctx.ptr.push(unsafe.Pointer(v.Pointer()))
-      ctx.value.push(v.Elem())
-      ctx.state.push(unfoldMapState)
-      ctx.detail.push(unfoldWaitStart)
-      ctx.unfolder.push(newUnfolderRefl())
-    } else {
-      // duplicate pointer, so we can assign after child-object is finished
-      ctx.ptr.push(ctx.ptr.current)
-    }
+  {{ template "mapIfc" }}
 
+
+# makeTypeWithName(name, type)
+templates.makeTypeWithName: |
+  {{ $type := .type }}
+  {{ $name := capitalize .name | printf "unfolderMap%v" }}
+  {{ $startName := capitalize .name | printf "unfoldMapStart%v" }}
+  {{ $keyName := capitalize .name | printf "unfoldMapKey%v" }}
+
+  {{ invoke "makeUnfoldType" "name" $name }}
+  {{ invoke "makeUnfoldType" "name" $startName "base" "unfolderErrObjectStart" }}
+  {{ invoke "makeUnfoldType" "name" $keyName "base" "unfolderErrExpectKey" }}
+
+  func (u *{{ $name }} ) initState(ctx *unfoldCtx, ptr unsafe.Pointer) {
+    ctx.unfolder.push(new{{ $keyName | capitalize}}())
+    ctx.unfolder.push(new{{ $startName | capitalize}}())
+    ctx.ptr.push(ptr)
+  }
+
+  func (u * {{ $keyName }} ) cleanup(ctx *unfoldCtx) {
+    ctx.unfolder.pop()
+    ctx.ptr.pop()
+  }
+
+  func (u * {{ $startName }}) cleanup(ctx *unfoldCtx) {
+    ctx.unfolder.pop()
+  }
+
+
+  func (u *{{ $name }} ) ptr(ctx *unfoldCtx) *map[string]{{ $type }} {
+    return (*map[string]{{ $type }})(ctx.ptr.current)
+  }
+
+
+  func (u *{{ $startName }} ) OnObjectStart(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
+    // TODO: validate baseType
+
+    u.cleanup(ctx)
+    return nil
+  }
+
+
+  func (u *{{ $keyName }} ) OnKey(ctx *unfoldCtx, key string) error {
+    ctx.key.push(key)
+    ctx.unfolder.current = new{{ $name | capitalize }}()
+    return nil
+  }
+
+  func (u *{{ $keyName }} ) OnObjectFinished(ctx *unfoldCtx) error {
+    u.cleanup(ctx)
+    return nil
+  }
+
+  func (u *{{ $name }} ) put(ctx *unfoldCtx, v {{ $type }}) error {
+    to := u.ptr(ctx)
+    if *to == nil {
+      *to = map[string]{{ $type }}{}
+    }
+    (*to)[ctx.key.pop()] = v
+
+    ctx.unfolder.current = new{{ $keyName | capitalize }}()
+    return nil
+  }
+
+templates.mapIfc: |
+  func unfoldIfcStartSubMap(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
+    _, ptr, unfolder := makeMapPtr(ctx, l, baseType)
+    ctx.ptr.push(ptr)
     ctx.baseType.push(baseType)
+    unfolder.initState(ctx, ptr)
     return ctx.unfolder.current.OnObjectStart(ctx, l, baseType)
   }
 
@@ -57,85 +121,20 @@ main: |
     }
   }
 
-  func makeMapPtr(ctx *unfoldCtx, l int, bt structform.BaseType) interface{} {
+  func makeMapPtr(ctx *unfoldCtx, l int, bt structform.BaseType) (interface{}, unsafe.Pointer, ptrUnfolder) {
     switch bt {
     {{ range $bt, $gt := data.mapTypes }}
     case structform.{{ $bt }}:
-      return new(map[string]{{ $gt }})
+      to := new(map[string]{{ $gt }})
+      {{ if or (eq $bt "AnyType")  (eq $bt "ZeroType") }}
+        unfolder := newUnfolderMapIfc()
+      {{ else }}
+        unfolder := newUnfolderMap{{ $gt | capitalize }}()
+      {{ end }}
+      return to, unsafe.Pointer(to), unfolder
     {{ end }}
     default:
       panic("invalid type code")
-      return nil
+      return nil, nil, nil
     }
-  }
-
-templates.makeTypeWithName: |
-  {{ $type := .type }}
-  {{ $name := capitalize .name | printf "unfolderMap%v" }}
-  {{ $mapType := $type | printf "map[string]%v" }}
-
-  {{ invoke "makeUnfoldType" "name" $name "type" $mapType }}
-
-  func (u *{{ $name }} ) OnObjectStart(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
-    // TODO: validate baseType
-
-    dtl := &ctx.detail
-    switch dtl.current {
-    case unfoldWaitStart:
-      dtl.current = unfoldWaitKey
-    case unfoldWaitKey:
-      return errExpectedObjectKey
-    default:
-      {{ if .makeSubObject }}
-      return {{ .makeSubObject }}(ctx, l, baseType)
-      {{ else }}
-        return errUnsupported
-      {{ end }}
-    }
-
-    return nil
-  }
-
-  func (u *{{ $name }} ) OnObjectFinished(ctx *unfoldCtx) error {
-    dtl := &ctx.detail
-    if dtl.current != unfoldWaitKey {
-      return errExpectedObjectKey
-    }
-
-    dtl.pop()
-    ctx.ptr.pop()
-    ctx.unfolder.pop()
-    return nil
-  }
-
-  func (u *{{ $name }} ) OnKey(ctx *unfoldCtx, key string) error {
-    dtl := &ctx.detail
-
-    if dtl.current != unfoldWaitKey {
-      return errUnexpectedObjectKey
-    }
-
-    ctx.key.push(key)
-    dtl.current = unfoldWaitElem
-    return nil
-  }
-
-  func (u *{{ $name }} ) ptr(ctx *unfoldCtx) *map[string]{{ $type }} {
-    return (*map[string]{{ $type }})(ctx.ptr.current)
-  }
-
-  func (u *{{ $name }} ) put(ctx *unfoldCtx, v {{ $type }}) error {
-    dtl := &ctx.detail
-
-    if dtl.current != unfoldWaitElem {
-      return errExpectedObjectKey
-    }
-
-    to := u.ptr(ctx)
-    if *to == nil {
-      *to = map[string]{{ $type }}{}
-    }
-    (*to)[ctx.key.pop()] = v
-    dtl.current = unfoldWaitKey
-    return nil
   }

@@ -23,10 +23,6 @@ type foldContext struct {
 	opts options
 }
 
-type options struct {
-	tag string
-}
-
 func Fold(v interface{}, vs structform.Visitor) error {
 	return NewIterator(vs).Fold(v)
 }

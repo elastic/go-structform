@@ -1,25 +1,20 @@
 data.stacks:
+- name: unfolderStack
+  type: unfolder
+- name: reflectValueStack
+  type: reflect.Value
+- name: ptrStack
+  init: 'nil'
+  type: unsafe.Pointer
 - name: keyStack
   type: string
   init: '""'
 - name: idxStack
   type: int
   init: -1
-- name: reflectValueStack
-  type: reflect.Value
-- name: unfoldStateStack
-  type: unfoldState
-- name: unfoldTypeStack
-  type: unfoldType
-- name: unfoldStateDetailStack
-  type: unfoldStateDetail
-- name: structTypeStack
+- name: structformTypeStack
   type: structform.BaseType
-- name: unfolderStack
-  type: unfolder
-- name: ptrStack
-  init: 'nil'
-  type: unsafe.Pointer
+  init: structform.AnyType
 
 main: |
   package gotype

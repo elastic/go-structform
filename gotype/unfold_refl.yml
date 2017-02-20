@@ -1,0 +1,56 @@
+import:
+  - unfold_templates.yml
+
+main: |
+  package gotype
+
+  func (u *unfolderReflSlice) OnNil(ctx *unfoldCtx) error {
+    u.prepare(ctx)
+    return nil
+  }
+
+  func (u *unfolderReflSlice) OnByte(ctx *unfoldCtx, v byte) error {
+    elem := u.prepare(ctx)
+    u.elem.initState(ctx, elem)
+    return ctx.unfolder.current.OnByte(ctx, v)
+  }
+
+  {{ range data.primitiveTypes }}
+  func (u *unfolderReflSlice) On{{ . | capitalize}}(ctx *unfoldCtx, v {{ . }}) error {
+    elem := u.prepare(ctx)
+    u.elem.initState(ctx, elem)
+    return ctx.unfolder.current.On{{ . | capitalize}}(ctx, v)
+  }
+  {{ end }}
+
+  func (u *unfolderReflMapOnElem) OnNil(ctx *unfoldCtx) error {
+    ptr := ctx.value.current
+    m := ptr.Elem()
+    v := reflect.Zero(m.Type().Elem())
+    m.SetMapIndex(reflect.ValueOf(ctx.key.pop()), v)
+
+    ctx.unfolder.current = u.shared.waitKey
+    return nil
+  }
+
+  func (u *unfolderReflMapOnElem) OnByte(ctx *unfoldCtx, v byte) error {
+    elem := u.prepare(ctx)
+    u.elem.initState(ctx, elem)
+    err := ctx.unfolder.current.OnByte(ctx, v)
+    if err == nil {
+      u.process(ctx)
+    }
+    return err
+  }
+
+  {{ range data.primitiveTypes }}
+    func (u *unfolderReflMapOnElem) On{{ . | capitalize}}(ctx *unfoldCtx, v {{ . }}) error {
+      elem := u.prepare(ctx)
+      u.elem.initState(ctx, elem)
+      err := ctx.unfolder.current.On{{ . | capitalize }}(ctx, v)
+      if err == nil {
+        u.process(ctx)
+      }
+      return err
+    }
+  {{ end }}

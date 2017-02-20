@@ -1,0 +1,84 @@
+import:
+  - unfold_templates.yml
+
+main: |
+  package gotype
+
+  func lookupGoTypeUnfolder(to interface{}) (unsafe.Pointer, ptrUnfolder) {
+    switch ptr := to.(type) {
+      case *interface{}:
+        return unsafe.Pointer(ptr), newUnfolderIfc()
+      case *[]interface{}:
+        return unsafe.Pointer(ptr), newUnfolderArrIfc()
+      case *map[string]interface{}:
+        return unsafe.Pointer(ptr), newUnfolderMapIfc()
+
+      {{ range data.primitiveTypes }}
+      case *{{ . }}:
+        return unsafe.Pointer(ptr), newUnfolder{{ . | capitalize }}()
+      case *[]{{ . }}:
+        return unsafe.Pointer(ptr), newUnfolderArr{{ . | capitalize }}()
+      case *map[string]{{ . }}:
+        return unsafe.Pointer(ptr), newUnfolderMap{{ . | capitalize }}()
+      {{ end }}
+    default:
+      return nil, nil
+    }
+  }
+
+  func lookupReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
+    // we always expect a pointer
+    bt := t.Elem()
+
+    switch bt.Kind() {
+    case reflect.Interface:
+      return unfolderReflIfc, nil
+    {{ range data.primitiveTypes }}
+    case reflect.{{ . | capitalize }}:
+      return unfolderRefl{{ . | capitalize }}, nil
+    {{ end }}
+
+    case reflect.Array:
+      return nil, errTODO()
+
+    case reflect.Slice:
+      et := bt.Elem()
+      switch et.Kind() {
+      case reflect.Interface:
+        return unfolderReflArrIfc, nil
+      {{ range data.primitiveTypes }}
+      case reflect.{{ . | capitalize }}:
+        return unfolderReflArr{{ . | capitalize }}, nil
+      {{ end }}
+      }
+
+      unfolderElem, err := lookupReflUnfolder(ctx, reflect.PtrTo(et))
+      if err != nil {
+        return nil, err
+      }
+      return newUnfolderReflSlice(unfolderElem), nil
+
+    case reflect.Map:
+      et := bt.Elem()
+      switch et.Kind() {
+      case reflect.Interface:
+        return unfolderReflMapIfc, nil
+      {{ range data.primitiveTypes }}
+      case reflect.{{ . | capitalize }}:
+        return unfolderReflMap{{ . | capitalize }}, nil
+      {{ end }}
+      }
+
+      unfolderElem, err := lookupReflUnfolder(ctx, reflect.PtrTo(et))
+      if err != nil {
+        return nil, err
+      }
+      return newUnfolderReflMap(unfolderElem), nil
+
+    case reflect.Struct:
+      return nil, errTODO()
+
+     default:
+       return nil, errTODO()
+    }
+  }

@@ -6,9 +6,17 @@ main: |
 
   import "github.com/urso/go-structform"
 
-  {{/* define types */}}
-  {{ invoke "makeTypeWithName" "name" "Ifc" "type" "interface{}" "makeSubArray" "unfoldIfcStartSubArray" }}
+  {{/* defined 'lifted' pointer slice unfolders into reflection based unfolders */}}
+  var (
+    unfolderReflArrIfc = liftGoUnfolder(newUnfolderArrIfc())
+    {{ range data.primitiveTypes }}
+    {{ $t := capitalize . }}
+      unfolderReflArr{{ $t }} = liftGoUnfolder(newUnfolderArr{{ $t }}())
+    {{ end }}
+  )
 
+  {{/* define pointer based unfolder types */}}
+  {{ invoke "makeTypeWithName" "name" "Ifc" "type" "interface{}" }}
   {{ template "makeType" "bool" }}
   {{ template "makeType" "string" }}
   {{ range .numTypes }}
@@ -25,23 +33,84 @@ main: |
     {{ invoke "onNumberFns" "name" $name "type" $type "fn" "append" }}
   {{ end }}
 
-  func unfoldIfcStartSubArray(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
-    tmp := makeArrayPtr(ctx, l, baseType)
-    if !ctx.trySetGotypeTarget(tmp) {
-      // use reflection
-      v := reflect.ValueOf(tmp)
-      ctx.ptr.push(unsafe.Pointer(v.Pointer()))
-      ctx.value.push(v.Elem())
-      ctx.state.push(unfoldArrayState)
-      ctx.detail.push(unfoldWaitStart)
-      ctx.unfolder.push(newUnfolderRefl())
-      ctx.baseType.push(structform.ZeroType)
-    } else {
-      // duplicate pointer, so we can assign after child-array is finished
-      ctx.ptr.push(ctx.ptr.current)
+  {{ template "arrIfc" }}
+
+
+# makeTypeWithName(name, type)
+templates.makeTypeWithName: |
+  {{ $type := .type }}
+  {{ $name := capitalize .name | printf "unfolderArr%v" }}
+  {{ $startName := capitalize .name | printf "unfoldArrStart%v" }}
+
+  {{ invoke "makeUnfoldType" "name" $name  }}
+  {{ invoke "makeUnfoldType" "name" $startName "base" "unfolderErrArrayStart" }} 
+
+  func (u *{{ $name }} ) initState(ctx *unfoldCtx, ptr unsafe.Pointer) {
+    ctx.unfolder.push(u)
+    ctx.unfolder.push(new{{ $startName | capitalize}}())
+    ctx.idx.push(0)
+    ctx.ptr.push(ptr)
+  }
+
+  func (u * {{ $name }} ) cleanup(ctx *unfoldCtx) {
+    ctx.unfolder.pop()
+    ctx.idx.pop()
+    ctx.ptr.pop()
+  }
+
+  func (u * {{ $startName }}) cleanup(ctx *unfoldCtx) {
+    ctx.unfolder.pop()
+  }
+
+  func (u *{{ $startName }} ) ptr(ctx *unfoldCtx) *[]{{ $type }} {
+    return (*[]{{ $type }})(ctx.ptr.current)
+  }
+
+  func (u *{{ $name }} ) ptr(ctx *unfoldCtx) *[]{{ $type }} {
+    return (*[]{{ $type }})(ctx.ptr.current)
+  }
+
+  func (u *{{ $startName }}) OnArrayStart(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
+    to := u.ptr(ctx)
+    if l < 0 {
+      l = 0
     }
 
+    if *to == nil && l > 0 {
+      *to = make([]{{ $type }}, l)
+    } else if l < len(*to) {
+      *to = (*to)[:l]
+    }
+
+    u.cleanup(ctx)
+    return nil
+  }
+
+  func (u *{{ $name }} ) OnArrayFinished(ctx *unfoldCtx) error {
+    u.cleanup(ctx)
+    return nil
+  }
+
+  func (u *{{ $name }} ) append(ctx *unfoldCtx, v {{ $type }}) error {
+    idx := &ctx.idx
+    to := u.ptr(ctx)
+    if len(*to) <= idx.current {
+      *to = append(*to, v)
+    } else {
+      (*to)[idx.current] = v
+    }
+
+    idx.current++
+    return nil
+  }
+
+templates.arrIfc: |
+
+  func unfoldIfcStartSubArray(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
+    _, ptr, unfolder := makeArrayPtr(ctx, l, baseType)
+    ctx.ptr.push(ptr) // store pointer for use in 'Finish'
     ctx.baseType.push(baseType)
+    unfolder.initState(ctx, ptr)
     return ctx.unfolder.current.OnArrayStart(ctx, l, baseType)
   }
 
@@ -59,81 +128,29 @@ main: |
     }
   }
 
-  func makeArrayPtr(ctx *unfoldCtx, l int, bt structform.BaseType) interface{} {
+  func makeArrayPtr(ctx *unfoldCtx, l int, bt structform.BaseType) (interface{}, unsafe.Pointer, ptrUnfolder) {
     switch bt {
     {{ range $bt, $gt := data.mapTypes }}
     case structform.{{ $bt }}:
+      var to *[]{{ $gt }}
       if l <= 0 {
-        return new([]{{ $gt }})
+        to = new([]{{ $gt }})
+      } else {
+        tmp := make([]{{ $gt }}, l)
+        to = &tmp
       }
-      tmp := make([]{{ $gt }}, l)
-      return &tmp
+
+      ptr := unsafe.Pointer(to)
+      {{ if or (eq $bt "AnyType")  (eq $bt "ZeroType") }}
+        unfolder := newUnfolderArrIfc()
+      {{ else }}
+        unfolder := newUnfolderArr{{ $gt | capitalize }}()
+      {{ end }}
+      return to, ptr, unfolder
+
     {{ end }}
     default:
       panic("invalid type code")
-      return nil
+      return nil, nil, nil
     }
-  }
-
-templates.makeTypeWithName: |
-  {{ $type := .type }}
-  {{ $name := capitalize .name | printf "unfolderArr%v" }}
-  {{ $arrType := $type | printf "[]%v" }}
-
-  {{ invoke "makeUnfoldType" "name" $name "type" $arrType }}
-
-  func (u *{{ $name }} ) OnArrayStart(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
-    // TODO: validate baseType
-
-    dtl := &ctx.detail
-    if dtl.current != unfoldWaitStart {
-      {{ if .makeSubArray }}
-        return {{ .makeSubArray }}(ctx, l, baseType)
-      {{ else }}
-        return errUnexpectedArrayStart
-      {{ end }}
-    }
-
-    to := u.ptr(ctx)
-    if l < 0 {
-      l = 0
-    }
-
-    if *to == nil && l > 0 {
-      *to = make([]{{ $type }}, l)
-    } else if l < len(*to) {
-      *to = (*to)[:l]
-    }
-
-
-    dtl.current = unfoldWaitElem
-    ctx.idx.push(0)
-    return nil
-  }
-
-  func (u *{{ $name }} ) OnArrayFinished(ctx *unfoldCtx) error {
-    ctx.unfolder.pop()
-    ctx.ptr.pop()
-    if ctx.detail.pop() != unfoldWaitStart {
-      ctx.idx.pop()
-    }
-
-    return nil
-  }
-
-  func (u *{{ $name }} ) ptr(ctx *unfoldCtx) *[]{{ $type }} {
-    return (*[]{{ $type }})(ctx.ptr.current)
-  }
-
-  func (u *{{ $name }} ) append(ctx *unfoldCtx, v {{ $type }}) error {
-    idx := &ctx.idx
-    to := u.ptr(ctx)
-    if len(*to) <= idx.current {
-      *to = append(*to, v)
-    } else {
-      (*to)[idx.current] = v
-    }
-
-    idx.current++
-    return nil
   }

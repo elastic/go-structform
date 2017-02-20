@@ -276,6 +276,7 @@ func getReflectFoldSlice(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	}, nil
 }
 
+/*
 // TODO: create visitors casting the actual values via reflection instead of
 //       golang type conversion:
 func getReflectFoldPrimitive(t reflect.Type) reFoldFn {
@@ -384,6 +385,7 @@ func getReflectFoldPrimitive(t reflect.Type) reFoldFn {
 
 	return nil
 }
+*/
 
 func foldAnyReflect(C *foldContext, v reflect.Value) error {
 	f, err := getReflectFold(C, v.Type())

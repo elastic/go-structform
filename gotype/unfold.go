@@ -2,6 +2,7 @@ package gotype
 
 import (
 	"reflect"
+	"unsafe"
 
 	structform "github.com/urso/go-structform"
 )
@@ -13,151 +14,95 @@ type Unfolder struct {
 type unfoldCtx struct {
 	opts options
 
-	// function stacks
-	// sel unfoldTypeStack
-
-	// reflection state stacks
-	value  reflectValueStack
-	key    keyStack
-	idx    idxStack
-	state  unfoldStateStack
-	detail unfoldStateDetailStack
-
-	baseType structTypeStack
 	unfolder unfolderStack
+	value    reflectValueStack
+	baseType structformTypeStack
 	ptr      ptrStack
+	key      keyStack
+	idx      idxStack
 }
 
-// unfold state used to handled next value
-type unfoldState uint8
-
-type unfoldStateDetail uint8
-
-type unfoldType uint8
-
-func println(v ...interface{}) {
-	// fmt.Println(v...)
+type ptrUnfolder interface {
+	initState(*unfoldCtx, unsafe.Pointer)
 }
 
-func printf(s string, v ...interface{}) {
-	// fmt.Printf(s+"\n", v...)
+type reflUnfolder interface {
+	initState(*unfoldCtx, reflect.Value)
 }
 
-//go:generate stringer -type=unfoldState
-const (
-	unfoldInvalidState unfoldState = iota
-	unfoldStartState
-	unfoldArrayState
-	unfoldMapState
-	unfoldStructState
-	unfoldAssignState
-)
+type unfolder interface {
+	// primitives
+	OnNil(*unfoldCtx) error
+	OnBool(*unfoldCtx, bool) error
+	OnString(*unfoldCtx, string) error
+	OnInt8(*unfoldCtx, int8) error
+	OnInt16(*unfoldCtx, int16) error
+	OnInt32(*unfoldCtx, int32) error
+	OnInt64(*unfoldCtx, int64) error
+	OnInt(*unfoldCtx, int) error
+	OnByte(*unfoldCtx, byte) error
+	OnUint8(*unfoldCtx, uint8) error
+	OnUint16(*unfoldCtx, uint16) error
+	OnUint32(*unfoldCtx, uint32) error
+	OnUint64(*unfoldCtx, uint64) error
+	OnUint(*unfoldCtx, uint) error
+	OnFloat32(*unfoldCtx, float32) error
+	OnFloat64(*unfoldCtx, float64) error
 
-//go:generate stringer -type=unfoldStateDetail
-const (
-	unfoldWaitStart unfoldStateDetail = iota
-	unfoldWaitKey
-	unfoldWaitElem
-)
+	// array types
+	OnArrayStart(*unfoldCtx, int, structform.BaseType) error
+	OnArrayFinished(*unfoldCtx) error
+	OnChildArrayDone(*unfoldCtx) error
 
-var (
-	tInterface = reflect.TypeOf((*interface{})(nil)).Elem()
-	tString    = reflect.TypeOf("")
-	tBool      = reflect.TypeOf(true)
-	tInt       = reflect.TypeOf(int(0))
-	tInt8      = reflect.TypeOf(int8(0))
-	tInt16     = reflect.TypeOf(int16(0))
-	tInt32     = reflect.TypeOf(int32(0))
-	tInt64     = reflect.TypeOf(int64(0))
-	tUint      = reflect.TypeOf(uint(0))
-	tByte      = reflect.TypeOf(byte(0))
-	tUint8     = reflect.TypeOf(uint8(0))
-	tUint16    = reflect.TypeOf(uint16(0))
-	tUint32    = reflect.TypeOf(uint32(0))
-	tUint64    = reflect.TypeOf(uint64(0))
-	tFloat32   = reflect.TypeOf(float32(0))
-	tFloat64   = reflect.TypeOf(float64(0))
-)
+	// object types
+	OnObjectStart(*unfoldCtx, int, structform.BaseType) error
+	OnObjectFinished(*unfoldCtx) error
+	OnKey(*unfoldCtx, string) error
+	OnChildObjectDone(*unfoldCtx) error
+}
 
 func NewUnfolder(to interface{}) (*Unfolder, error) {
 	u := &Unfolder{}
-	u.opts = options{
-		tag: "struct",
-	}
+	u.opts = options{tag: "struct"}
 
-	// init processing stacks
+	u.unfolder.init(&unfolderNoTarget{})
 	u.value.init(reflect.Value{})
-	u.key.init()
-	u.baseType.init(structform.AnyType)
-	u.idx.init()
 	u.ptr.init()
-	u.state.init(unfoldStartState)
-	u.detail.init(unfoldWaitElem)
-	u.unfolder.init(nil)
+	u.key.init()
+	u.idx.init()
+	u.baseType.init()
 
-	if err := u.setTarget(to); err != nil {
+	err := u.setTarget(to)
+	if err != nil {
 		return nil, err
 	}
+
 	return u, nil
 }
 
 func (u *Unfolder) setTarget(to interface{}) error {
-	if to == nil {
-		return errNilInput
-	}
+	ctx := &u.unfoldCtx
 
-	if u.trySetGotypeTarget(to) {
+	if ptr, u := lookupGoTypeUnfolder(to); u != nil {
+		u.initState(ctx, ptr)
 		return nil
 	}
 
-	vTo := reflect.ValueOf(to)
-	k := vTo.Kind()
-	isValid := to != nil && (k == reflect.Ptr || k == reflect.Map)
-	if !isValid {
+	t := reflect.TypeOf(to)
+	if t.Kind() != reflect.Ptr {
 		return errRequiresPointer
 	}
 
-	vTo = chaseValuePointers(vTo)
-	tTo := chaseTypePointers(vTo.Type())
-	k = tTo.Kind()
-
-	var state0 = unfoldInvalidState
-	var detail0 = unfoldWaitStart
-
-	switch k {
-	case reflect.Map:
-		state0 = unfoldMapState
-
-		/* TODO:
-		case reflect.Struct:
-			state0 = unfoldStructState
-		*/
-
-	case reflect.Array, reflect.Slice:
-		state0 = unfoldArrayState
-		if k == reflect.Slice && !vTo.IsNil() {
-			vTo.SetLen(0)
-		}
-
-	case reflect.Interface:
-		if tTo == tInterface {
-			state0 = unfoldAssignState
-		}
-
-	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64, reflect.String:
-		state0 = unfoldAssignState
+	ru, err := lookupReflUnfolder(&u.unfoldCtx, t)
+	if err != nil {
+		return err
+	}
+	if ru != nil {
+		ru.initState(ctx, reflect.ValueOf(to))
+		return nil
 	}
 
-	u.state.push(state0)
-	u.detail.push(detail0)
-
-	u.unfolder.init(newUnfolderRefl())
-	u.unfolder.push(newUnfolderRefl())
-	u.value.push(vTo)
-
-	// u.unfoldCtx.setUnfoldGoTypes(to)
-
-	return nil
+	return errUnsupported
 }
 
 func (u *unfoldCtx) OnObjectStart(len int, baseType structform.BaseType) error {
@@ -172,7 +117,7 @@ func (u *unfoldCtx) OnObjectFinished() error {
 	}
 
 	lAfter := len(u.unfolder.stack) + 1
-	if old := u.unfolder.current; old != nil && lBefore != lAfter {
+	if old := u.unfolder.current; lAfter > 1 && lBefore != lAfter {
 		return old.OnChildObjectDone(u)
 	}
 
@@ -195,7 +140,7 @@ func (u *unfoldCtx) OnArrayFinished() error {
 	}
 
 	lAfter := len(u.unfolder.stack) + 1
-	if old := u.unfolder.current; old != nil && lBefore != lAfter {
+	if old := u.unfolder.current; lAfter > 1 && lBefore != lAfter {
 		return old.OnChildArrayDone(u)
 	}
 

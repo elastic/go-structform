@@ -3,6 +3,7 @@ package gotype
 import "errors"
 
 var (
+	errNotInitialized           = errors.New("Unfolder is not initialized")
 	errInvalidState             = errors.New("invalid state")
 	errUnsupported              = errors.New("unsupported")
 	errMapRequiresStringKey     = errors.New("map requires string key")
@@ -21,6 +22,9 @@ var (
 	errUnexpectedArrayStart     = errors.New("unexpected array start")
 	errUnexpectedObjectStart    = errors.New("unexpected object start")
 	errExpectedObjectKey        = errors.New("waiting for object key or object end marker")
+	errExpectedArray            = errors.New("expected array")
+	errExpectedObject           = errors.New("expected object")
+	errExpectedObjectValue      = errors.New("expected object value")
 )
 
 func errTODO() error {

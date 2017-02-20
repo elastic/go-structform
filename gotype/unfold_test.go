@@ -61,7 +61,7 @@ var unfoldSamples = []struct {
 	{`[]`, []uint8{}, new(interface{})},
 	{`[]`, []uint8{}, new([]uint8)},
 	{`[]`, []interface{}{}, new([]interface{})},
-	{`[]`, []interface{}{}, &[]struct{ A string }{}},
+	// {`[]`, []interface{}{}, &[]struct{ A string }{}},
 	{`[1,2,3]`, []uint8{1, 2, 3}, new(interface{})},
 	{`[1,2,3]`, []uint8{1, 2, 3}, &[]uint8{0, 0, 0}},
 	{`[1,2,3]`, []uint8{1, 2, 3}, &[]uint8{0, 0, 0, 4}},
@@ -84,12 +84,13 @@ var unfoldSamples = []struct {
 	{`[null,true,false,123,3.14,"test"]`,
 		[]interface{}{nil, true, false, 123, 3.14, "test"},
 		&[]interface{}{}},
-	{`[1,2,3]`, []int{1, 2, 3}, &[]*int{}},
-	{`[1,null,3]`, []interface{}{1, nil, 3}, &[]*int{}},
+	// {`[1,2,3]`, []int{1, 2, 3}, &[]*int{}},
+	// {`[1,null,3]`, []interface{}{1, nil, 3}, &[]*int{}},
 
 	// nested arrays
 	{`[[]]`, []interface{}{[]uint{}}, new(interface{})},
 	{`[]`, []interface{}{}, &[]interface{}{[]interface{}{1}}},
+	{`[]`, []interface{}{}, &[][]int{}},
 	{`[]`, []interface{}{}, &[][]int{{1}}},
 	{`[[1]]`, []interface{}{[]interface{}{1}}, &[][]int{}},
 	{`[[1,2,3],[4,5,6]]`,
@@ -189,7 +190,7 @@ var unfoldSamples = []struct {
 	{`[{"a":1}]`, []map[string]int{{"a": 1}}, &[]interface{}{}},
 	{`[{"a":1}]`, []map[string]int{{"a": 1}}, &[]map[string]interface{}{}},
 	{`[{"a":1}]`, []map[string]int{{"a": 1}}, &[]map[string]interface{}{{"a": 2}}},
-	{`[{"a":1}]`, []map[string]int{{"a": 1}}, &[]map[string]int{{"b": 2}}},
+	{`[{"a":1,"b":2}]`, []map[string]int{{"a": 1}}, &[]map[string]int{{"b": 2}}},
 	{`[{"a":1},{"b":2}]`, []map[string]int{{"a": 1}, {"b": 2}}, &[]map[string]int{}},
 	{`[{"a":1},{"b":"b"},{"c":true}]`,
 		[]map[string]interface{}{{"a": 1}, {"b": "b"}, {"c": true}},
@@ -238,7 +239,7 @@ func TestFoldUnfoldConsistent(t *testing.T) {
 			continue
 		}
 
-		if st := &u.state; len(st.stack) > 0 {
+		if st := &u.unfolder; len(st.stack) > 0 {
 			t.Errorf("Unfolder state stack not empty: %v, %v", st.stack, st.current)
 			continue
 		}
@@ -305,12 +306,6 @@ func BenchmarkUnfoldJsonInto(b *testing.B) {
 	for i, test := range tests {
 		name := fmt.Sprintf("%v (%T->%T)", test.json, test.input, test.value)
 		b.Logf("run test (%v): %v", i, name)
-
-		/*
-			if i > 3 {
-				break
-			}
-		*/
 
 		un, err := NewUnfolder(test.value)
 		if err != nil {
