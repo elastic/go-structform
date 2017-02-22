@@ -22,8 +22,11 @@ var unfoldSamples = []struct {
 	{`true`, true, new(interface{})},
 	{`false`, false, new(bool)},
 	{`false`, false, new(interface{})},
+	{`null`, nil, new(*int)},
 	{`10`, int8(10), new(int8)},
 	{`10`, int8(10), new(int)},
+	{`10`, int8(10), new(*int8)},
+	{`10`, int8(10), new(*int)},
 	{`10`, int8(10), new(interface{})},
 	{`10`, int32(10), new(int64)},
 	{`10`, int32(10), new(int16)},
@@ -84,8 +87,8 @@ var unfoldSamples = []struct {
 	{`[null,true,false,123,3.14,"test"]`,
 		[]interface{}{nil, true, false, 123, 3.14, "test"},
 		&[]interface{}{}},
-	// {`[1,2,3]`, []int{1, 2, 3}, &[]*int{}},
-	// {`[1,null,3]`, []interface{}{1, nil, 3}, &[]*int{}},
+	{`[1,2,3]`, []int{1, 2, 3}, &[]*int{}},
+	{`[1,null,3]`, []interface{}{1, nil, 3}, &[]*int{}},
 
 	// nested arrays
 	{`[[]]`, []interface{}{[]uint{}}, new(interface{})},

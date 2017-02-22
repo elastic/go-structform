@@ -54,3 +54,33 @@ main: |
       return err
     }
   {{ end }}
+
+  func (u *unfolderReflPtr) OnNil(ctx *unfoldCtx) error {
+    ptr := ctx.value.current
+    v := ptr.Elem()
+    v.Set(reflect.Zero(v.Type()))
+    u.cleanup(ctx)
+    return nil
+  }
+
+  func (u *unfolderReflPtr) OnByte(ctx *unfoldCtx, v byte) error {
+    elem := u.prepare(ctx)
+    u.elem.initState(ctx, elem)
+    err := ctx.unfolder.current.OnByte(ctx, v)
+    if err == nil {
+      u.process(ctx)
+    }
+    return err
+  }
+
+  {{ range data.primitiveTypes }}
+    func (u *unfolderReflPtr) On{{ . | capitalize}}(ctx *unfoldCtx, v {{ . }}) error {
+      elem := u.prepare(ctx)
+      u.elem.initState(ctx, elem)
+      err := ctx.unfolder.current.On{{ . | capitalize }}(ctx, v)
+      if err == nil {
+        u.process(ctx)
+      }
+      return err
+    }
+  {{ end }}

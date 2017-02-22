@@ -2,7 +2,6 @@
 package gotype
 
 import (
-	"fmt"
 	"unsafe"
 
 	"github.com/urso/go-structform"
@@ -2058,7 +2057,6 @@ func unfoldIfcFinishSubArray(ctx *unfoldCtx) (interface{}, error) {
 		return *(*[]interface{})(child), nil
 
 	default:
-		fmt.Println("base type: ", bt)
 		return nil, errTODO()
 	}
 }

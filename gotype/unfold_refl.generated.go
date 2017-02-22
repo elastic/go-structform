@@ -257,3 +257,161 @@ func (u *unfolderReflMapOnElem) OnFloat64(ctx *unfoldCtx, v float64) error {
 	}
 	return err
 }
+
+func (u *unfolderReflPtr) OnNil(ctx *unfoldCtx) error {
+	ptr := ctx.value.current
+	v := ptr.Elem()
+	v.Set(reflect.Zero(v.Type()))
+	u.cleanup(ctx)
+	return nil
+}
+
+func (u *unfolderReflPtr) OnByte(ctx *unfoldCtx, v byte) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnByte(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnBool(ctx *unfoldCtx, v bool) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnBool(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnString(ctx *unfoldCtx, v string) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnString(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnUint(ctx *unfoldCtx, v uint) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnUint(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnUint8(ctx *unfoldCtx, v uint8) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnUint8(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnUint16(ctx *unfoldCtx, v uint16) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnUint16(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnUint32(ctx *unfoldCtx, v uint32) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnUint32(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnUint64(ctx *unfoldCtx, v uint64) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnUint64(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnInt(ctx *unfoldCtx, v int) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnInt(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnInt8(ctx *unfoldCtx, v int8) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnInt8(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnInt16(ctx *unfoldCtx, v int16) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnInt16(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnInt32(ctx *unfoldCtx, v int32) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnInt32(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnInt64(ctx *unfoldCtx, v int64) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnInt64(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnFloat32(ctx *unfoldCtx, v float32) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnFloat32(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}
+
+func (u *unfolderReflPtr) OnFloat64(ctx *unfoldCtx, v float64) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	err := ctx.unfolder.current.OnFloat64(ctx, v)
+	if err == nil {
+		u.process(ctx)
+	}
+	return err
+}

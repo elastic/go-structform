@@ -116,7 +116,6 @@ templates.mapIfc: |
       return *(*map[string]{{ $gt }})(child), nil
     {{ end }}
     default:
-      fmt.Println("base type: ", bt)
       return nil, errTODO()
     }
   }

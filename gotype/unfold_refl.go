@@ -40,6 +40,10 @@ type unfolderReflMapOnElem struct {
 	elem   reflUnfolder
 }
 
+type unfolderReflPtr struct {
+	elem reflUnfolder
+}
+
 var (
 	_singletonUnfolderReflSliceStart = &unfolderReflSliceStart{}
 	_singletonUnfolderReflMapStart   = &unfolderReflMapStart{}
@@ -74,6 +78,7 @@ func (u *unfolderReflSliceStart) cleanup(ctx *unfoldCtx) {
 }
 
 func (u *unfolderReflSliceStart) OnArrayStart(ctx *unfoldCtx, l int, baseType structform.BaseType) error {
+
 	ptr := ctx.value.current
 	v := ptr.Elem()
 
@@ -228,4 +233,68 @@ func (u *unfolderReflMapOnElem) OnKey(_ *unfoldCtx, _ string) error {
 
 func (u *unfolderReflMapOnElem) OnObjectFinished(_ *unfoldCtx) error {
 	return errExpectedObjectValue
+}
+
+func newUnfolderReflPtr(elem reflUnfolder) *unfolderReflPtr {
+	return &unfolderReflPtr{elem}
+}
+
+func (u *unfolderReflPtr) initState(ctx *unfoldCtx, v reflect.Value) {
+	ctx.value.push(v)
+	ctx.unfolder.push(u)
+}
+
+func (u *unfolderReflPtr) cleanup(ctx *unfoldCtx) {
+	ctx.value.pop()
+	ctx.unfolder.pop()
+}
+
+func (u *unfolderReflPtr) prepare(ctx *unfoldCtx) reflect.Value {
+	ptr := ctx.value.current
+
+	v := ptr.Elem()
+	target := reflect.New(v.Type().Elem())
+	ctx.value.push(target)
+	return target
+}
+
+func (u *unfolderReflPtr) process(ctx *unfoldCtx) {
+	v := ctx.value.pop()
+	ptr := ctx.value.current.Elem()
+	ptr.Set(v)
+	u.cleanup(ctx)
+}
+
+func (u *unfolderReflPtr) OnObjectStart(ctx *unfoldCtx, l int, bt structform.BaseType) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	return ctx.unfolder.current.OnObjectStart(ctx, l, bt)
+}
+
+func (u *unfolderReflPtr) OnChildObjectDone(ctx *unfoldCtx) error {
+	u.process(ctx)
+	return nil
+}
+
+func (u *unfolderReflPtr) OnKey(_ *unfoldCtx, _ string) error {
+	return errUnsupported
+}
+
+func (u *unfolderReflPtr) OnObjectFinished(_ *unfoldCtx) error {
+	return errUnsupported
+}
+
+func (u *unfolderReflPtr) OnArrayStart(ctx *unfoldCtx, l int, bt structform.BaseType) error {
+	elem := u.prepare(ctx)
+	u.elem.initState(ctx, elem)
+	return ctx.unfolder.current.OnArrayStart(ctx, l, bt)
+}
+
+func (u *unfolderReflPtr) OnChildArrayDone(ctx *unfoldCtx) error {
+	u.process(ctx)
+	return nil
+}
+
+func (u *unfolderReflPtr) OnArrayFinished(_ *unfoldCtx) error {
+	return errUnsupported
 }

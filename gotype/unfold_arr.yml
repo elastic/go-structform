@@ -123,7 +123,6 @@ templates.arrIfc: |
       return *(*[]{{ $gt }})(child), nil
     {{ end }}
     default:
-      fmt.Println("base type: ", bt)
       return nil, errTODO()
     }
   }

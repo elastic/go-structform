@@ -171,6 +171,13 @@ func lookupReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
 	case reflect.Array:
 		return nil, errTODO()
 
+	case reflect.Ptr:
+		unfolderElem, err := lookupReflUnfolder(ctx, bt)
+		if err != nil {
+			return nil, err
+		}
+		return newUnfolderReflPtr(unfolderElem), nil
+
 	case reflect.Slice:
 		et := bt.Elem()
 		switch et.Kind() {
