@@ -123,29 +123,7 @@ func (u *unfolderReflSlice) prepare(ctx *unfoldCtx) reflect.Value {
 	return elem
 }
 
-func (u *unfolderReflSlice) OnArrayStart(ctx *unfoldCtx, l int, bt structform.BaseType) error {
-	elem := u.prepare(ctx)
-	u.elem.initState(ctx, elem)
-	return ctx.unfolder.current.OnArrayStart(ctx, l, bt)
-}
-
-func (u *unfolderReflSlice) OnChildArrayDone(ctx *unfoldCtx) error {
-	return nil
-}
-
-func (u *unfolderReflSlice) OnObjectStart(ctx *unfoldCtx, l int, bt structform.BaseType) error {
-	elem := u.prepare(ctx)
-	u.elem.initState(ctx, elem)
-	return ctx.unfolder.current.OnObjectStart(ctx, l, bt)
-}
-
-func (u *unfolderReflSlice) OnChildObjectDone(_ *unfoldCtx) error { return nil }
-
 func (u *unfolderReflSlice) OnObjectFinished(_ *unfoldCtx) error {
-	return errUnsupported
-}
-
-func (u *unfolderReflSlice) OnKey(_ *unfoldCtx, _ string) error {
 	return errUnsupported
 }
 
@@ -199,41 +177,8 @@ func (u *unfolderReflMapOnElem) process(ctx *unfoldCtx) {
 	ctx.unfolder.current = u.shared.waitKey
 }
 
-func (u *unfolderReflMapOnElem) OnArrayStart(ctx *unfoldCtx, l int, bt structform.BaseType) error {
-
-	elem := u.prepare(ctx)
-	u.elem.initState(ctx, elem)
-	return ctx.unfolder.current.OnArrayStart(ctx, l, bt)
-}
-
-func (u *unfolderReflMapOnElem) OnChildArrayDone(ctx *unfoldCtx) error {
-	u.process(ctx)
-	return nil
-}
-
-func (u *unfolderReflMapOnElem) OnArrayFinished(_ *unfoldCtx) error {
-	return errUnsupported
-}
-
-func (u *unfolderReflMapOnElem) OnObjectStart(ctx *unfoldCtx, l int, bt structform.BaseType) error {
-
-	elem := u.prepare(ctx)
-	u.elem.initState(ctx, elem)
-	return ctx.unfolder.current.OnObjectStart(ctx, l, bt)
-}
-
-func (u *unfolderReflMapOnElem) OnChildObjectDone(ctx *unfoldCtx) error {
-	u.process(ctx)
-	return nil
-}
-
-func (u *unfolderReflMapOnElem) OnKey(_ *unfoldCtx, _ string) error {
-	return errExpectedObjectValue
-}
-
-func (u *unfolderReflMapOnElem) OnObjectFinished(_ *unfoldCtx) error {
-	return errExpectedObjectValue
-}
+func (u *unfolderReflMapOnElem) OnObjectFinished(_ *unfoldCtx) error { return errExpectedObjectValue }
+func (u *unfolderReflMapOnElem) OnArrayFinished(_ *unfoldCtx) error  { return errUnsupported }
 
 func newUnfolderReflPtr(elem reflUnfolder) *unfolderReflPtr {
 	return &unfolderReflPtr{elem}
@@ -265,36 +210,5 @@ func (u *unfolderReflPtr) process(ctx *unfoldCtx) {
 	u.cleanup(ctx)
 }
 
-func (u *unfolderReflPtr) OnObjectStart(ctx *unfoldCtx, l int, bt structform.BaseType) error {
-	elem := u.prepare(ctx)
-	u.elem.initState(ctx, elem)
-	return ctx.unfolder.current.OnObjectStart(ctx, l, bt)
-}
-
-func (u *unfolderReflPtr) OnChildObjectDone(ctx *unfoldCtx) error {
-	u.process(ctx)
-	return nil
-}
-
-func (u *unfolderReflPtr) OnKey(_ *unfoldCtx, _ string) error {
-	return errUnsupported
-}
-
-func (u *unfolderReflPtr) OnObjectFinished(_ *unfoldCtx) error {
-	return errUnsupported
-}
-
-func (u *unfolderReflPtr) OnArrayStart(ctx *unfoldCtx, l int, bt structform.BaseType) error {
-	elem := u.prepare(ctx)
-	u.elem.initState(ctx, elem)
-	return ctx.unfolder.current.OnArrayStart(ctx, l, bt)
-}
-
-func (u *unfolderReflPtr) OnChildArrayDone(ctx *unfoldCtx) error {
-	u.process(ctx)
-	return nil
-}
-
-func (u *unfolderReflPtr) OnArrayFinished(_ *unfoldCtx) error {
-	return errUnsupported
-}
+func (u *unfolderReflPtr) OnObjectFinished(_ *unfoldCtx) error { return errUnsupported }
+func (u *unfolderReflPtr) OnArrayFinished(_ *unfoldCtx) error  { return errUnsupported }

@@ -12,5 +12,6 @@ package gotype
 //go:generate mktmpl -f -o unfold_arr.generated.go unfold_arr.yml
 //go:generate mktmpl -f -o unfold_map.generated.go unfold_map.yml
 //go:generate mktmpl -f -o unfold_refl.generated.go unfold_refl.yml
+//go:generate mktmpl -f -o unfold_ignore.generated.go unfold_ignore.yml
 
 // go:generate mktmpl -f -o unfold_sel_generated.go unfold_sel.yml

@@ -118,7 +118,177 @@ func lookupGoTypeUnfolder(to interface{}) (unsafe.Pointer, ptrUnfolder) {
 	}
 }
 
+func lookupGoPtrUnfolder(t reflect.Type) ptrUnfolder {
+	switch t.Kind() {
+	case reflect.Interface:
+		return newUnfolderIfc()
+
+	case reflect.Bool:
+		return newUnfolderBool()
+
+	case reflect.String:
+		return newUnfolderString()
+
+	case reflect.Uint:
+		return newUnfolderUint()
+
+	case reflect.Uint8:
+		return newUnfolderUint8()
+
+	case reflect.Uint16:
+		return newUnfolderUint16()
+
+	case reflect.Uint32:
+		return newUnfolderUint32()
+
+	case reflect.Uint64:
+		return newUnfolderUint64()
+
+	case reflect.Int:
+		return newUnfolderInt()
+
+	case reflect.Int8:
+		return newUnfolderInt8()
+
+	case reflect.Int16:
+		return newUnfolderInt16()
+
+	case reflect.Int32:
+		return newUnfolderInt32()
+
+	case reflect.Int64:
+		return newUnfolderInt64()
+
+	case reflect.Float32:
+		return newUnfolderFloat32()
+
+	case reflect.Float64:
+		return newUnfolderFloat64()
+
+	case reflect.Slice:
+		et := t.Elem()
+		switch et.Kind() {
+		case reflect.Interface:
+			return newUnfolderArrIfc()
+
+		case reflect.Bool:
+			return newUnfolderArrBool()
+
+		case reflect.String:
+			return newUnfolderArrString()
+
+		case reflect.Uint:
+			return newUnfolderArrUint()
+
+		case reflect.Uint8:
+			return newUnfolderArrUint8()
+
+		case reflect.Uint16:
+			return newUnfolderArrUint16()
+
+		case reflect.Uint32:
+			return newUnfolderArrUint32()
+
+		case reflect.Uint64:
+			return newUnfolderArrUint64()
+
+		case reflect.Int:
+			return newUnfolderArrInt()
+
+		case reflect.Int8:
+			return newUnfolderArrInt8()
+
+		case reflect.Int16:
+			return newUnfolderArrInt16()
+
+		case reflect.Int32:
+			return newUnfolderArrInt32()
+
+		case reflect.Int64:
+			return newUnfolderArrInt64()
+
+		case reflect.Float32:
+			return newUnfolderArrFloat32()
+
+		case reflect.Float64:
+			return newUnfolderArrFloat64()
+
+		}
+
+	case reflect.Map:
+		if t.Key().Kind() != reflect.String {
+			return nil
+		}
+
+		et := t.Elem()
+		switch et.Kind() {
+		case reflect.Interface:
+			return newUnfolderMapIfc()
+
+		case reflect.Bool:
+			return newUnfolderMapBool()
+
+		case reflect.String:
+			return newUnfolderMapString()
+
+		case reflect.Uint:
+			return newUnfolderMapUint()
+
+		case reflect.Uint8:
+			return newUnfolderMapUint8()
+
+		case reflect.Uint16:
+			return newUnfolderMapUint16()
+
+		case reflect.Uint32:
+			return newUnfolderMapUint32()
+
+		case reflect.Uint64:
+			return newUnfolderMapUint64()
+
+		case reflect.Int:
+			return newUnfolderMapInt()
+
+		case reflect.Int8:
+			return newUnfolderMapInt8()
+
+		case reflect.Int16:
+			return newUnfolderMapInt16()
+
+		case reflect.Int32:
+			return newUnfolderMapInt32()
+
+		case reflect.Int64:
+			return newUnfolderMapInt64()
+
+		case reflect.Float32:
+			return newUnfolderMapFloat32()
+
+		case reflect.Float64:
+			return newUnfolderMapFloat64()
+
+		}
+
+	}
+
+	return nil
+}
+
 func lookupReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
+	if f := unfoldRegistry.find(t); f != nil {
+		return f, nil
+	}
+
+	f, err := buildReflUnfolder(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+
+	unfoldRegistry.set(t, f)
+	return f, nil
+}
+
+func buildReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
 	// we always expect a pointer
 	bt := t.Elem()
 
@@ -291,7 +461,7 @@ func lookupReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
 		return newUnfolderReflMap(unfolderElem), nil
 
 	case reflect.Struct:
-		return nil, errTODO()
+		return createUnfolderReflStruct(ctx, t)
 
 	default:
 		return nil, errTODO()

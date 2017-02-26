@@ -2,6 +2,7 @@ package gotype
 
 import (
 	"reflect"
+	"sync"
 	"unsafe"
 
 	structform "github.com/urso/go-structform"
@@ -60,6 +61,13 @@ type unfolder interface {
 	OnKey(*unfoldCtx, string) error
 	OnChildObjectDone(*unfoldCtx) error
 }
+
+type typeUnfoldRegistry struct {
+	mu sync.RWMutex
+	m  map[reflect.Type]reflUnfolder
+}
+
+var unfoldRegistry = newTypeUnfoldRegistry()
 
 func NewUnfolder(to interface{}) (*Unfolder, error) {
 	u := &Unfolder{}
@@ -209,4 +217,20 @@ func (u *unfoldCtx) OnFloat32(f float32) error {
 
 func (u *unfoldCtx) OnFloat64(f float64) error {
 	return u.unfolder.current.OnFloat64(u, f)
+}
+
+func newTypeUnfoldRegistry() *typeUnfoldRegistry {
+	return &typeUnfoldRegistry{m: map[reflect.Type]reflUnfolder{}}
+}
+
+func (r *typeUnfoldRegistry) find(t reflect.Type) reflUnfolder {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.m[t]
+}
+
+func (r *typeUnfoldRegistry) set(t reflect.Type, f reflUnfolder) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.m[t] = f
 }

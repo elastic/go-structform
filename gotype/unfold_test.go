@@ -15,6 +15,7 @@ var unfoldSamples = []struct {
 	input interface{}
 	value interface{}
 }{
+
 	// primitives
 	{`null`, nil, new(interface{})},
 	{`""`, nil, new(string)},
@@ -208,7 +209,7 @@ var unfoldSamples = []struct {
 		&map[string][]int{"a": {0, 2}, "b": {0}}},
 
 	// struct
-	// {`{"a":1}`, map[string]int{"a": 1}, &struct{ A int }{}},
+	{`{"a":1}`, map[string]int{"a": 1}, &struct{ A int }{}},
 }
 
 func TestFoldUnfoldConsistent(t *testing.T) {

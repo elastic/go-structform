@@ -26,7 +26,61 @@ main: |
     }
   }
 
+  func lookupGoPtrUnfolder(t reflect.Type) (ptrUnfolder) {
+    switch t.Kind() {
+    case reflect.Interface:
+      return newUnfolderIfc()
+    {{ range data.primitiveTypes }}
+      case reflect.{{ . | capitalize }}:
+        return newUnfolder{{ . | capitalize }}()
+    {{ end }}
+
+    case reflect.Slice:
+      et := t.Elem()
+      switch et.Kind() {
+      case reflect.Interface:
+        return newUnfolderArrIfc()
+      {{ range data.primitiveTypes }}
+        case reflect.{{ . | capitalize }}:
+          return newUnfolderArr{{ . | capitalize }}()
+      {{ end }}
+      }
+
+    case reflect.Map:
+      if t.Key().Kind() != reflect.String {
+        return nil
+      }
+
+      et := t.Elem()
+      switch et.Kind() {
+      case reflect.Interface:
+        return newUnfolderMapIfc()
+      {{ range data.primitiveTypes }}
+        case reflect.{{ . | capitalize }}:
+          return newUnfolderMap{{ . | capitalize }}()
+      {{ end }}
+      }
+
+    }
+
+    return nil
+  }
+
   func lookupReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
+    if f := unfoldRegistry.find(t); f != nil {
+      return f, nil
+    }
+
+    f, err := buildReflUnfolder(ctx, t)
+    if err != nil {
+      return nil, err
+    }
+
+    unfoldRegistry.set(t, f)
+    return f, nil
+  }
+
+  func buildReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
     // we always expect a pointer
     bt := t.Elem()
 
@@ -83,7 +137,7 @@ main: |
       return newUnfolderReflMap(unfolderElem), nil
 
     case reflect.Struct:
-      return nil, errTODO()
+      return createUnfolderReflStruct(ctx, t)
 
      default:
        return nil, errTODO()
