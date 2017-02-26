@@ -2,12 +2,13 @@ package json
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"io"
 	"reflect"
 	"strconv"
 	"unicode"
+	"unicode/utf16"
+	"unicode/utf8"
 	"unsafe"
 
 	structform "github.com/urso/go-structform"
@@ -34,22 +35,26 @@ type Parser struct {
 }
 
 var (
-	errFailing             = errors.New("JSON parser failed")
-	errIncomplete          = errors.New("Incomplete JSON input")
-	errUnknownChar         = errors.New("unknown character")
-	errQuoteMissing        = errors.New("missing closing quote")
-	errExpectColon         = errors.New("expected ':' after map key")
-	errUnexpectedDictClose = errors.New("unexpected '}'")
-	errUnexpectedArrClose  = errors.New("unexpected ']'")
-	errExpectedDigit       = errors.New("expected a digit")
-	errExpectedObject      = errors.New("expected JSON object")
-	errExpectedArray       = errors.New("expected JSON array")
-	errExpectedFieldName   = errors.New("expected JSON object field name")
-	errExpectedInteger     = errors.New("expected integer value")
-	errExpectedNull        = errors.New("expected null value")
-	errExpectedFalse       = errors.New("expected false value")
-	errExpectedTrue        = errors.New("expected true value")
-	errExpectedArrayField  = errors.New("expected ']' or ','")
+	errFailing               = errors.New("JSON parser failed")
+	errIncomplete            = errors.New("Incomplete JSON input")
+	errUnknownChar           = errors.New("unknown character")
+	errQuoteMissing          = errors.New("missing closing quote")
+	errExpectColon           = errors.New("expected ':' after map key")
+	errUnexpectedDictClose   = errors.New("unexpected '}'")
+	errUnexpectedArrClose    = errors.New("unexpected ']'")
+	errExpectedDigit         = errors.New("expected a digit")
+	errExpectedObject        = errors.New("expected JSON object")
+	errExpectedArray         = errors.New("expected JSON array")
+	errExpectedFieldName     = errors.New("expected JSON object field name")
+	errExpectedInteger       = errors.New("expected integer value")
+	errExpectedNull          = errors.New("expected null value")
+	errExpectedFalse         = errors.New("expected false value")
+	errExpectedTrue          = errors.New("expected true value")
+	errExpectedArrayField    = errors.New("expected ']' or ','")
+	errUnquoteInEscape       = errors.New("incomplete escape at end of string")
+	errUnquoteInvalidChar    = errors.New("invalid character found in string")
+	errUnquoteInvalidUnicode = errors.New("unicode escape is no hex number")
+	errUnquoteUnknownEscape  = errors.New("unknown escape sequence")
 )
 
 type state uint8
@@ -436,11 +441,165 @@ func (p *Parser) doString(b []byte) (string, bool, []byte, error) {
 		p.literalBuffer = b[:0] // reset buffer
 	}
 
-	// XXX: use encoding/json to unescape and parse into go string
-	//      see if we can replace with processing the string into p.literalBuffer
-	var str string
-	err := json.Unmarshal(b, &str)
-	return str, done, rest, err
+	var err error
+	var allocated bool
+	b = b[1 : len(b)-1]
+	b, allocated, err = p.unquote(b)
+	if err != nil {
+		return "", false, nil, nil
+	}
+
+	var s string
+	if allocated {
+		s = bytes2Str(b)
+	} else {
+		s = string(b)
+	}
+	return s, done, rest, nil
+}
+
+func (p *Parser) unquote(in []byte) ([]byte, bool, error) {
+	if len(in) == 0 {
+		return in, false, nil
+	}
+
+	// Check for unusual characters and escape sequence. If none is found,
+	// return slice as is:
+	i := 0
+	for i < len(in) {
+		c := in[i]
+		if c == '\\' || c == '"' || c < ' ' {
+			break
+		}
+
+		if c < utf8.RuneSelf {
+			i++
+			continue
+		}
+
+		r, sz := utf8.DecodeRune(in[i:])
+		if r == utf8.RuneError && sz == 1 {
+			break
+		}
+
+		i += sz
+	}
+
+	// no special character found -> return as is
+	if i == len(in) {
+		return in, false, nil
+	}
+
+	// found escape character (or other unusual character) ->
+	// allocate output buffer (try to use literalBuffer)
+	out := p.literalBuffer[:0]
+	allocated := false
+	utf8Delta := 2 * utf8.UTFMax
+	minLen := len(in) + utf8Delta
+	if cap(out) < minLen {
+		// TODO: is minLen < some upper bound, store in literalBuffer
+		out = make([]byte, minLen)
+		allocated = true
+	} else {
+		out = out[:minLen]
+	}
+
+	// init output buffer
+	written := copy(out, in[:i])
+
+	for i < len(in) {
+		if written > len(out)-utf8Delta {
+			// out of room -> increase write buffer
+			newLen := len(out) * 2
+			if cap(out) < newLen {
+				tmp := make([]byte, len(out)*2)
+				copy(tmp, out[:written])
+				out = tmp
+				allocated = true
+			} else {
+				out = out[:newLen]
+			}
+		}
+
+		c := in[i]
+		switch {
+		case c == '\\':
+			i++
+			if i >= len(in) {
+				return nil, false, errUnquoteInEscape
+			}
+
+			switch in[i] {
+			default:
+				return nil, false, errUnquoteUnknownEscape
+			case '"', '\\', '/', '\'':
+				out[written] = in[i]
+				i++
+				written++
+			case '\b':
+				out[written] = '\b'
+				i++
+				written++
+			case '\f':
+				out[written] = '\f'
+				i++
+				written++
+			case '\n':
+				out[written] = '\n'
+				i++
+				written++
+			case '\r':
+				out[written] = '\r'
+				i++
+				written++
+			case '\t':
+				out[written] = '\t'
+				i++
+				written++
+			case 'u':
+				i++
+				code, err := strconv.ParseUint(string(in[i:i+4]), 16, 64)
+				if err != nil {
+					return nil, false, errUnquoteInvalidUnicode
+				}
+
+				i += 4
+				r := rune(code)
+				if utf16.IsSurrogate(r) {
+					var dec rune = unicode.ReplacementChar
+
+					valid := in[i] == '\\' && in[i+1] == 'u'
+					if valid {
+						code, err := strconv.ParseUint(string(in[i+2:i+6]), 16, 64)
+						if err == nil {
+							dec = utf16.DecodeRune(r, rune(code))
+							if dec != unicode.ReplacementChar {
+								i += 6
+							}
+						}
+					}
+
+					r = dec
+				}
+				written += utf8.EncodeRune(out[written:], r)
+			}
+
+		case c == '"', c < ' ':
+			return nil, false, errUnquoteInvalidChar
+
+		case c < utf8.RuneSelf:
+			out[written] = c
+			i++
+			written++
+
+		default:
+			_, sz := utf8.DecodeRune(in[i:])
+			i += sz
+			written += copy(out[written:], in[i:i+sz])
+		}
+	}
+
+	return out[:written], allocated, nil
 }
 
 func (p *Parser) stepNumber(b []byte) ([]byte, error) {
