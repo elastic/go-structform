@@ -73,26 +73,27 @@ func createFieldUnfolder(ctx *unfoldCtx, t reflect.Type, idx int) (string, field
 		name = strings.ToLower(name)
 	}
 
-	if pu := lookupGoPtrUnfolder(st.Type); pu != nil {
-		fu := fieldUnfolder{
-			offset:    st.Offset,
-			size:      int(st.Type.Size()),
-			initState: pu.initState,
-		}
-		return name, fu, true, nil
-	}
-
-	targetType := reflect.PtrTo(st.Type)
-	ru, err := lookupReflUnfolder(ctx, targetType)
-	if err != nil {
-		return "", fieldUnfolder{}, false, err
-	}
-
 	fu := fieldUnfolder{
-		offset:    st.Offset,
-		size:      int(st.Type.Size()),
-		initState: wrapReflUnfolder(targetType, ru),
+		offset: st.Offset,
+		size:   int(st.Type.Size()),
 	}
+
+	if pu := lookupGoPtrUnfolder(st.Type); pu != nil {
+		fu.initState = pu.initState
+	} else {
+		targetType := reflect.PtrTo(st.Type)
+		ru, err := lookupReflUnfolder(ctx, targetType)
+		if err != nil {
+			return "", fieldUnfolder{}, false, err
+		}
+
+		if su, ok := ru.(*unfolderStruct); ok {
+			fu.initState = su.initStatePtr
+		} else {
+			fu.initState = wrapReflUnfolder(targetType, ru)
+		}
+	}
+
 	return name, fu, true, nil
 }
 
