@@ -205,36 +205,23 @@ func fieldFold(c *foldContext, t reflect.Type, idx int) (reFoldFn, error) {
 	}
 
 	tagName, tagOpts := parseTags(st.Tag.Get(c.opts.tag))
-	if tagName != "" {
-		name = tagName
-	} else {
-		name = strings.ToLower(name)
-	}
-
-	valueVisitor, err := fieldValueFold(c, tagOpts, st.Type)
-	if err != nil {
-		return nil, err
-	}
-
-	return makeFieldFold(name, idx, valueVisitor)
-}
-
-func makeFieldFold(name string, idx int, fn reFoldFn) (reFoldFn, error) {
-	return func(C *foldContext, v reflect.Value) error {
-		if err := C.OnKey(name); err != nil {
-			return err
+	if !tagOpts.squash {
+		if tagName != "" {
+			name = tagName
+		} else {
+			name = strings.ToLower(name)
 		}
-		return fn(C, v.Field(idx))
-	}, nil
-}
 
-func fieldValueFold(c *foldContext, opts tagOptions, t reflect.Type) (reFoldFn, error) {
-	if !opts.squash {
-		return getReflectFold(c, t)
+		valueVisitor, err := getReflectFold(c, st.Type)
+		if err != nil {
+			return nil, err
+		}
+
+		return makeFieldFold(name, idx, valueVisitor)
 	}
 
 	var (
-		N, bt       = baseType(t)
+		N, bt       = baseType(st.Type)
 		baseVisitor reFoldFn
 		err         error
 	)
@@ -251,7 +238,23 @@ func fieldValueFold(c *foldContext, opts tagOptions, t reflect.Type) (reFoldFn, 
 		return nil, err
 	}
 
-	return makePointerFold(N, baseVisitor), nil
+	valueVisitor := makePointerFold(N, baseVisitor)
+	return makeFieldInlineFold(idx, valueVisitor)
+}
+
+func makeFieldFold(name string, idx int, fn reFoldFn) (reFoldFn, error) {
+	return func(C *foldContext, v reflect.Value) error {
+		if err := C.OnKey(name); err != nil {
+			return err
+		}
+		return fn(C, v.Field(idx))
+	}, nil
+}
+
+func makeFieldInlineFold(idx int, fn reFoldFn) (reFoldFn, error) {
+	return func(C *foldContext, v reflect.Value) error {
+		return fn(C, v.Field(idx))
+	}, nil
 }
 
 func getReflectFoldSlice(c *foldContext, t reflect.Type) (reFoldFn, error) {

@@ -1,6 +1,7 @@
 package gotype
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"unicode"
@@ -20,9 +21,7 @@ type unfolderStructStart struct {
 }
 
 type fieldUnfolder struct {
-	offset uintptr
-	size   int
-
+	offset    uintptr
 	initState func(ctx *unfoldCtx, sp unsafe.Pointer)
 }
 
@@ -38,45 +37,72 @@ func createUnfolderReflStruct(ctx *unfoldCtx, t reflect.Type) (*unfolderStruct, 
 	// assume t is pointer to struct
 	t = t.Elem()
 
-	count := t.NumField()
-	fields := map[string]fieldUnfolder{}
-
-	for i := 0; i < count; i++ {
-		name, fu, ok, err := createFieldUnfolder(ctx, t, i)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			continue
-		}
-
-		fields[name] = fu
+	fields, err := fieldUnfolders(ctx, t)
+	if err != nil {
+		return nil, err
 	}
 
 	u := &unfolderStruct{fields: fields}
 	return u, nil
 }
 
-func createFieldUnfolder(ctx *unfoldCtx, t reflect.Type, idx int) (string, fieldUnfolder, bool, error) {
-	st := t.Field(idx)
+func fieldUnfolders(ctx *unfoldCtx, t reflect.Type) (map[string]fieldUnfolder, error) {
+	count := t.NumField()
+	fields := map[string]fieldUnfolder{}
 
-	name := st.Name
-	rune, _ := utf8.DecodeRuneInString(name)
-	if !unicode.IsUpper(rune) {
-		return "", fieldUnfolder{}, false, nil
+	for i := 0; i < count; i++ {
+		st := t.Field(i)
+
+		name := st.Name
+		rune, _ := utf8.DecodeRuneInString(name)
+		if !unicode.IsUpper(rune) {
+			continue
+		}
+
+		tagName, tagOpts := parseTags(st.Tag.Get(ctx.opts.tag))
+		if tagOpts.squash {
+			if st.Type.Kind() != reflect.Struct {
+				return nil, errSquashNeedObject
+			}
+
+			sub, err := fieldUnfolders(ctx, st.Type)
+			if err != nil {
+				return nil, err
+			}
+
+			for name, fu := range sub {
+				fu.offset += st.Offset
+				if _, exists := fields[name]; exists {
+					return nil, fmt.Errorf("duplicate field name %v", name)
+				}
+
+				fields[name] = fu
+			}
+		} else {
+			if tagName != "" {
+				name = tagName
+			} else {
+				name = strings.ToLower(name)
+			}
+
+			if _, exists := fields[name]; exists {
+				return nil, fmt.Errorf("duplicate field name %v", name)
+			}
+
+			fu, err := makeFieldUnfolder(ctx, st)
+			if err != nil {
+				return nil, err
+			}
+
+			fields[name] = fu
+		}
 	}
 
-	tagName, _ := parseTags(st.Tag.Get(ctx.opts.tag))
-	if tagName != "" {
-		name = tagName
-	} else {
-		name = strings.ToLower(name)
-	}
+	return fields, nil
+}
 
-	fu := fieldUnfolder{
-		offset: st.Offset,
-		size:   int(st.Type.Size()),
-	}
+func makeFieldUnfolder(ctx *unfoldCtx, st reflect.StructField) (fieldUnfolder, error) {
+	fu := fieldUnfolder{offset: st.Offset}
 
 	if pu := lookupGoPtrUnfolder(st.Type); pu != nil {
 		fu.initState = pu.initState
@@ -84,7 +110,7 @@ func createFieldUnfolder(ctx *unfoldCtx, t reflect.Type, idx int) (string, field
 		targetType := reflect.PtrTo(st.Type)
 		ru, err := lookupReflUnfolder(ctx, targetType)
 		if err != nil {
-			return "", fieldUnfolder{}, false, err
+			return fu, err
 		}
 
 		if su, ok := ru.(*unfolderStruct); ok {
@@ -94,7 +120,7 @@ func createFieldUnfolder(ctx *unfoldCtx, t reflect.Type, idx int) (string, field
 		}
 	}
 
-	return name, fu, true, nil
+	return fu, nil
 }
 
 func wrapReflUnfolder(t reflect.Type, ru reflUnfolder) func(*unfoldCtx, unsafe.Pointer) {
@@ -124,6 +150,9 @@ func (u *unfolderStruct) OnObjectFinished(ctx *unfoldCtx) error {
 	ctx.ptr.pop()
 	return nil
 }
+
+func (u *unfolderStruct) OnChildObjectDone(ctx *unfoldCtx) error { return nil }
+func (u *unfolderStruct) OnChildArrayDone(ctx *unfoldCtx) error  { return nil }
 
 func (u *unfolderStruct) OnKey(ctx *unfoldCtx, key string) error {
 	field, exists := u.fields[key]

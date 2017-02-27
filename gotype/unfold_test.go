@@ -210,6 +210,33 @@ var unfoldSamples = []struct {
 
 	// struct
 	{`{"a":1}`, map[string]int{"a": 1}, &struct{ A int }{}},
+	{`{"a":1}`, map[string]int{"a": 1}, &struct{ A *int }{}},
+	{`{"a": 1, "c": 2}`, map[string]int{"a": 1}, &struct{ A, b, C int }{b: 1, C: 2}},
+	{`{"a": {"c": 2}, "b": 1}`,
+		map[string]interface{}{"a": map[string]int{"c": 2}},
+		&struct {
+			A struct{ C int }
+			B int
+		}{B: 1},
+	},
+	{`{"a": 1}`,
+		map[string]interface{}{"a": 1},
+		&struct {
+			S struct {
+				A int
+			} `struct:",inline"`
+		}{},
+	},
+	{`{"a":{"b":{"c":1}}}`,
+		map[string]interface{}{
+			"a": map[string]interface{}{
+				"b": map[string]int{
+					"c": 1,
+				},
+			},
+		},
+		&struct{ A struct{ B struct{ C int } } }{},
+	},
 }
 
 func TestFoldUnfoldConsistent(t *testing.T) {
