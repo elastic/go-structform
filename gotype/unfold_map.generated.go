@@ -95,6 +95,10 @@ func (u *unfoldMapStartIfc) OnObjectStart(ctx *unfoldCtx, l int, baseType struct
 	return nil
 }
 
+func (u *unfoldMapKeyIfc) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
+}
+
 func (u *unfoldMapKeyIfc) OnKey(ctx *unfoldCtx, key string) error {
 	ctx.key.push(key)
 	ctx.unfolder.current = newUnfolderMapIfc()
@@ -171,6 +175,10 @@ func (u *unfoldMapStartBool) OnObjectStart(ctx *unfoldCtx, l int, baseType struc
 
 	u.cleanup(ctx)
 	return nil
+}
+
+func (u *unfoldMapKeyBool) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
 }
 
 func (u *unfoldMapKeyBool) OnKey(ctx *unfoldCtx, key string) error {
@@ -251,6 +259,10 @@ func (u *unfoldMapStartString) OnObjectStart(ctx *unfoldCtx, l int, baseType str
 	return nil
 }
 
+func (u *unfoldMapKeyString) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
+}
+
 func (u *unfoldMapKeyString) OnKey(ctx *unfoldCtx, key string) error {
 	ctx.key.push(key)
 	ctx.unfolder.current = newUnfolderMapString()
@@ -327,6 +339,10 @@ func (u *unfoldMapStartUint) OnObjectStart(ctx *unfoldCtx, l int, baseType struc
 
 	u.cleanup(ctx)
 	return nil
+}
+
+func (u *unfoldMapKeyUint) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
 }
 
 func (u *unfoldMapKeyUint) OnKey(ctx *unfoldCtx, key string) error {
@@ -407,6 +423,10 @@ func (u *unfoldMapStartUint8) OnObjectStart(ctx *unfoldCtx, l int, baseType stru
 	return nil
 }
 
+func (u *unfoldMapKeyUint8) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
+}
+
 func (u *unfoldMapKeyUint8) OnKey(ctx *unfoldCtx, key string) error {
 	ctx.key.push(key)
 	ctx.unfolder.current = newUnfolderMapUint8()
@@ -483,6 +503,10 @@ func (u *unfoldMapStartUint16) OnObjectStart(ctx *unfoldCtx, l int, baseType str
 
 	u.cleanup(ctx)
 	return nil
+}
+
+func (u *unfoldMapKeyUint16) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
 }
 
 func (u *unfoldMapKeyUint16) OnKey(ctx *unfoldCtx, key string) error {
@@ -563,6 +587,10 @@ func (u *unfoldMapStartUint32) OnObjectStart(ctx *unfoldCtx, l int, baseType str
 	return nil
 }
 
+func (u *unfoldMapKeyUint32) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
+}
+
 func (u *unfoldMapKeyUint32) OnKey(ctx *unfoldCtx, key string) error {
 	ctx.key.push(key)
 	ctx.unfolder.current = newUnfolderMapUint32()
@@ -639,6 +667,10 @@ func (u *unfoldMapStartUint64) OnObjectStart(ctx *unfoldCtx, l int, baseType str
 
 	u.cleanup(ctx)
 	return nil
+}
+
+func (u *unfoldMapKeyUint64) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
 }
 
 func (u *unfoldMapKeyUint64) OnKey(ctx *unfoldCtx, key string) error {
@@ -719,6 +751,10 @@ func (u *unfoldMapStartInt) OnObjectStart(ctx *unfoldCtx, l int, baseType struct
 	return nil
 }
 
+func (u *unfoldMapKeyInt) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
+}
+
 func (u *unfoldMapKeyInt) OnKey(ctx *unfoldCtx, key string) error {
 	ctx.key.push(key)
 	ctx.unfolder.current = newUnfolderMapInt()
@@ -795,6 +831,10 @@ func (u *unfoldMapStartInt8) OnObjectStart(ctx *unfoldCtx, l int, baseType struc
 
 	u.cleanup(ctx)
 	return nil
+}
+
+func (u *unfoldMapKeyInt8) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
 }
 
 func (u *unfoldMapKeyInt8) OnKey(ctx *unfoldCtx, key string) error {
@@ -875,6 +915,10 @@ func (u *unfoldMapStartInt16) OnObjectStart(ctx *unfoldCtx, l int, baseType stru
 	return nil
 }
 
+func (u *unfoldMapKeyInt16) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
+}
+
 func (u *unfoldMapKeyInt16) OnKey(ctx *unfoldCtx, key string) error {
 	ctx.key.push(key)
 	ctx.unfolder.current = newUnfolderMapInt16()
@@ -951,6 +995,10 @@ func (u *unfoldMapStartInt32) OnObjectStart(ctx *unfoldCtx, l int, baseType stru
 
 	u.cleanup(ctx)
 	return nil
+}
+
+func (u *unfoldMapKeyInt32) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
 }
 
 func (u *unfoldMapKeyInt32) OnKey(ctx *unfoldCtx, key string) error {
@@ -1031,6 +1079,10 @@ func (u *unfoldMapStartInt64) OnObjectStart(ctx *unfoldCtx, l int, baseType stru
 	return nil
 }
 
+func (u *unfoldMapKeyInt64) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
+}
+
 func (u *unfoldMapKeyInt64) OnKey(ctx *unfoldCtx, key string) error {
 	ctx.key.push(key)
 	ctx.unfolder.current = newUnfolderMapInt64()
@@ -1107,6 +1159,10 @@ func (u *unfoldMapStartFloat32) OnObjectStart(ctx *unfoldCtx, l int, baseType st
 
 	u.cleanup(ctx)
 	return nil
+}
+
+func (u *unfoldMapKeyFloat32) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
 }
 
 func (u *unfoldMapKeyFloat32) OnKey(ctx *unfoldCtx, key string) error {
@@ -1187,6 +1243,10 @@ func (u *unfoldMapStartFloat64) OnObjectStart(ctx *unfoldCtx, l int, baseType st
 	return nil
 }
 
+func (u *unfoldMapKeyFloat64) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
+}
+
 func (u *unfoldMapKeyFloat64) OnKey(ctx *unfoldCtx, key string) error {
 	ctx.key.push(key)
 	ctx.unfolder.current = newUnfolderMapFloat64()
@@ -1216,6 +1276,9 @@ func (u *unfolderMapIfc) OnNil(ctx *unfoldCtx) error {
 func (u *unfolderMapIfc) OnBool(ctx *unfoldCtx, v bool) error { return u.put(ctx, v) }
 
 func (u *unfolderMapIfc) OnString(ctx *unfoldCtx, v string) error { return u.put(ctx, v) }
+func (u *unfolderMapIfc) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.OnString(ctx, string(v))
+}
 
 func (u *unfolderMapIfc) OnByte(ctx *unfoldCtx, v byte) error {
 	return u.put(ctx, (interface{})(v))
@@ -1304,6 +1367,9 @@ func (u *unfolderMapString) OnNil(ctx *unfoldCtx) error {
 }
 
 func (u *unfolderMapString) OnString(ctx *unfoldCtx, v string) error { return u.put(ctx, v) }
+func (u *unfolderMapString) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.OnString(ctx, string(v))
+}
 
 func (u *unfolderMapUint) OnNil(ctx *unfoldCtx) error {
 	return u.put(ctx, 0)
@@ -1991,54 +2057,71 @@ func unfoldIfcFinishSubMap(ctx *unfoldCtx) (interface{}, error) {
 	switch bt {
 
 	case structform.AnyType:
+		ctx.buf.release()
 		return *(*map[string]interface{})(child), nil
 
 	case structform.BoolType:
+		ctx.buf.release()
 		return *(*map[string]bool)(child), nil
 
 	case structform.ByteType:
+		ctx.buf.release()
 		return *(*map[string]uint8)(child), nil
 
 	case structform.Float32Type:
+		ctx.buf.release()
 		return *(*map[string]float32)(child), nil
 
 	case structform.Float64Type:
+		ctx.buf.release()
 		return *(*map[string]float64)(child), nil
 
 	case structform.Int16Type:
+		ctx.buf.release()
 		return *(*map[string]int16)(child), nil
 
 	case structform.Int32Type:
+		ctx.buf.release()
 		return *(*map[string]int32)(child), nil
 
 	case structform.Int64Type:
+		ctx.buf.release()
 		return *(*map[string]int64)(child), nil
 
 	case structform.Int8Type:
+		ctx.buf.release()
 		return *(*map[string]int8)(child), nil
 
 	case structform.IntType:
+		ctx.buf.release()
 		return *(*map[string]int)(child), nil
 
 	case structform.StringType:
+		ctx.buf.release()
 		return *(*map[string]string)(child), nil
 
 	case structform.Uint16Type:
+		ctx.buf.release()
 		return *(*map[string]uint16)(child), nil
 
 	case structform.Uint32Type:
+		ctx.buf.release()
 		return *(*map[string]uint32)(child), nil
 
 	case structform.Uint64Type:
+		ctx.buf.release()
 		return *(*map[string]uint64)(child), nil
 
 	case structform.Uint8Type:
+		ctx.buf.release()
 		return *(*map[string]uint8)(child), nil
 
 	case structform.UintType:
+		ctx.buf.release()
 		return *(*map[string]uint)(child), nil
 
 	case structform.ZeroType:
+		ctx.buf.release()
 		return *(*map[string]interface{})(child), nil
 
 	default:
@@ -2050,123 +2133,157 @@ func makeMapPtr(ctx *unfoldCtx, l int, bt structform.BaseType) (interface{}, uns
 	switch bt {
 
 	case structform.AnyType:
-		to := new(map[string]interface{})
+		sz := unsafe.Sizeof(map[string]interface{}{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]interface{})(ptr)
 
 		unfolder := newUnfolderMapIfc()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.BoolType:
-		to := new(map[string]bool)
+		sz := unsafe.Sizeof(map[string]bool{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]bool)(ptr)
 
 		unfolder := newUnfolderMapBool()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.ByteType:
-		to := new(map[string]uint8)
+		sz := unsafe.Sizeof(map[string]uint8{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]uint8)(ptr)
 
 		unfolder := newUnfolderMapUint8()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Float32Type:
-		to := new(map[string]float32)
+		sz := unsafe.Sizeof(map[string]float32{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]float32)(ptr)
 
 		unfolder := newUnfolderMapFloat32()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Float64Type:
-		to := new(map[string]float64)
+		sz := unsafe.Sizeof(map[string]float64{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]float64)(ptr)
 
 		unfolder := newUnfolderMapFloat64()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Int16Type:
-		to := new(map[string]int16)
+		sz := unsafe.Sizeof(map[string]int16{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]int16)(ptr)
 
 		unfolder := newUnfolderMapInt16()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Int32Type:
-		to := new(map[string]int32)
+		sz := unsafe.Sizeof(map[string]int32{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]int32)(ptr)
 
 		unfolder := newUnfolderMapInt32()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Int64Type:
-		to := new(map[string]int64)
+		sz := unsafe.Sizeof(map[string]int64{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]int64)(ptr)
 
 		unfolder := newUnfolderMapInt64()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Int8Type:
-		to := new(map[string]int8)
+		sz := unsafe.Sizeof(map[string]int8{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]int8)(ptr)
 
 		unfolder := newUnfolderMapInt8()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.IntType:
-		to := new(map[string]int)
+		sz := unsafe.Sizeof(map[string]int{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]int)(ptr)
 
 		unfolder := newUnfolderMapInt()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.StringType:
-		to := new(map[string]string)
+		sz := unsafe.Sizeof(map[string]string{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]string)(ptr)
 
 		unfolder := newUnfolderMapString()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Uint16Type:
-		to := new(map[string]uint16)
+		sz := unsafe.Sizeof(map[string]uint16{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]uint16)(ptr)
 
 		unfolder := newUnfolderMapUint16()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Uint32Type:
-		to := new(map[string]uint32)
+		sz := unsafe.Sizeof(map[string]uint32{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]uint32)(ptr)
 
 		unfolder := newUnfolderMapUint32()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Uint64Type:
-		to := new(map[string]uint64)
+		sz := unsafe.Sizeof(map[string]uint64{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]uint64)(ptr)
 
 		unfolder := newUnfolderMapUint64()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.Uint8Type:
-		to := new(map[string]uint8)
+		sz := unsafe.Sizeof(map[string]uint8{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]uint8)(ptr)
 
 		unfolder := newUnfolderMapUint8()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.UintType:
-		to := new(map[string]uint)
+		sz := unsafe.Sizeof(map[string]uint{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]uint)(ptr)
 
 		unfolder := newUnfolderMapUint()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	case structform.ZeroType:
-		to := new(map[string]interface{})
+		sz := unsafe.Sizeof(map[string]interface{}{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*map[string]interface{})(ptr)
 
 		unfolder := newUnfolderMapIfc()
 
-		return to, unsafe.Pointer(to), unfolder
+		return to, ptr, unfolder
 
 	default:
 		panic("invalid type code")

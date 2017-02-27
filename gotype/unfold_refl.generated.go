@@ -20,6 +20,10 @@ func (u *unfolderReflSlice) OnByte(ctx *unfoldCtx, v byte) error {
 	return err
 }
 
+func (u *unfolderReflSlice) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.OnString(ctx, string(v))
+}
+
 func (u *unfolderReflSlice) OnBool(ctx *unfoldCtx, v bool) error {
 	elem := u.prepare(ctx)
 	u.elem.initState(ctx, elem)
@@ -153,6 +157,10 @@ func (u *unfolderReflSlice) OnKey(_ *unfoldCtx, _ string) error {
 	return errUnsupported
 }
 
+func (u *unfolderReflSlice) OnKeyRef(_ *unfoldCtx, _ []byte) error {
+	return errUnsupported
+}
+
 func (u *unfolderReflSlice) OnChildObjectDone(ctx *unfoldCtx) error {
 
 	return nil
@@ -178,6 +186,10 @@ func (u *unfolderReflMapOnElem) OnByte(ctx *unfoldCtx, v byte) error {
 	}
 
 	return err
+}
+
+func (u *unfolderReflMapOnElem) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.OnString(ctx, string(v))
 }
 
 func (u *unfolderReflMapOnElem) OnBool(ctx *unfoldCtx, v bool) error {
@@ -371,6 +383,10 @@ func (u *unfolderReflMapOnElem) OnKey(_ *unfoldCtx, _ string) error {
 	return errExpectedObjectValue
 }
 
+func (u *unfolderReflMapOnElem) OnKeyRef(_ *unfoldCtx, _ []byte) error {
+	return errExpectedObjectValue
+}
+
 func (u *unfolderReflMapOnElem) OnChildObjectDone(ctx *unfoldCtx) error {
 
 	u.process(ctx)
@@ -396,6 +412,10 @@ func (u *unfolderReflPtr) OnByte(ctx *unfoldCtx, v byte) error {
 	}
 
 	return err
+}
+
+func (u *unfolderReflPtr) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.OnString(ctx, string(v))
 }
 
 func (u *unfolderReflPtr) OnBool(ctx *unfoldCtx, v bool) error {
@@ -586,6 +606,10 @@ func (u *unfolderReflPtr) OnObjectStart(ctx *unfoldCtx, l int, bt structform.Bas
 }
 
 func (u *unfolderReflPtr) OnKey(_ *unfoldCtx, _ string) error {
+	return errUnsupported
+}
+
+func (u *unfolderReflPtr) OnKeyRef(_ *unfoldCtx, _ []byte) error {
 	return errUnsupported
 }
 

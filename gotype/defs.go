@@ -1,6 +1,10 @@
 package gotype
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/urso/go-structform/internal/unsafe"
+)
 
 type options struct {
 	tag string
@@ -24,3 +28,7 @@ var (
 	tFloat32   = reflect.TypeOf(float32(0))
 	tFloat64   = reflect.TypeOf(float64(0))
 )
+
+func bytes2Str(b []byte) string {
+	return unsafe.Bytes2Str(b)
+}

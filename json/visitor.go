@@ -68,6 +68,18 @@ func (vs *Visitor) OnObjectFinished() error {
 	return vs.writeByte('}')
 }
 
+func (vs *Visitor) OnKeyRef(s []byte) error {
+	if err := vs.onFieldNext(); err != nil {
+		return err
+	}
+
+	err := vs.OnStringRef(s)
+	if err == nil {
+		err = vs.writeByte(':')
+	}
+	return err
+}
+
 func (vs *Visitor) OnKey(s string) error {
 	if err := vs.onFieldNext(); err != nil {
 		return err
@@ -117,6 +129,10 @@ func (vs *Visitor) tryElemNext() error {
 }
 
 var hex = "0123456789abcdef"
+
+func (vs *Visitor) OnStringRef(s []byte) error {
+	return vs.OnString(bytes2Str(s))
+}
 
 func (vs *Visitor) OnString(s string) error {
 	if err := vs.tryElemNext(); err != nil {

@@ -11,6 +11,7 @@ type ExtVisitor interface {
 	Visitor
 	ArrayValueVisitor
 	ObjectValueVisitor
+	StringRefVisitor
 }
 
 //go:generate stringer -type=BaseType
@@ -130,10 +131,19 @@ type ObjectValueVisitor interface {
 	OnFloat64Object(map[string]float64) error
 }
 
+// StringRefVisitor handles strings by reference into a byte string.
+// The reference must be processed immediately, as the string passed
+// might get overwritten after the callback returns.
+type StringRefVisitor interface {
+	OnStringRef(s []byte) error
+	OnKeyRef(s []byte) error
+}
+
 type extVisitor struct {
 	Visitor
 	ObjectValueVisitor
 	ArrayValueVisitor
+	StringRefVisitor
 }
 
 func EnsureExtVisitor(v Visitor) ExtVisitor {
@@ -154,5 +164,7 @@ func EnsureExtVisitor(v Visitor) ExtVisitor {
 	} else {
 		e.ArrayValueVisitor = extArrVisitor{v}
 	}
+	e.StringRefVisitor = MakeStringRefVisitor(v)
+
 	return e
 }

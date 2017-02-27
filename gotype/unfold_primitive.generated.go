@@ -496,6 +496,9 @@ func (u *unfolderIfc) OnNil(ctx *unfoldCtx) error {
 func (u *unfolderIfc) OnBool(ctx *unfoldCtx, v bool) error { return u.assign(ctx, v) }
 
 func (u *unfolderIfc) OnString(ctx *unfoldCtx, v string) error { return u.assign(ctx, v) }
+func (u *unfolderIfc) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.OnString(ctx, string(v))
+}
 
 func (u *unfolderIfc) OnByte(ctx *unfoldCtx, v byte) error {
 	return u.assign(ctx, (interface{})(v))
@@ -584,6 +587,9 @@ func (u *unfolderString) OnNil(ctx *unfoldCtx) error {
 }
 
 func (u *unfolderString) OnString(ctx *unfoldCtx, v string) error { return u.assign(ctx, v) }
+func (u *unfolderString) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.OnString(ctx, string(v))
+}
 
 func (u *unfolderUint) OnNil(ctx *unfoldCtx) error {
 	return u.assign(ctx, 0)

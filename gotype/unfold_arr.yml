@@ -120,6 +120,7 @@ templates.arrIfc: |
     switch bt {
     {{ range $bt, $gt := data.mapTypes }}
     case structform.{{ $bt }}:
+      ctx.buf.release()
       return *(*[]{{ $gt }})(child), nil
     {{ end }}
     default:
@@ -131,15 +132,14 @@ templates.arrIfc: |
     switch bt {
     {{ range $bt, $gt := data.mapTypes }}
     case structform.{{ $bt }}:
-      var to *[]{{ $gt }}
-      if l <= 0 {
-        to = new([]{{ $gt }})
-      } else {
-        tmp := make([]{{ $gt }}, l)
-        to = &tmp
+      sz := unsafe.Sizeof([]{{ $gt }}{})
+      ptr := ctx.buf.alloc(int(sz))
+      to := (*[]{{ $gt }})(ptr)
+
+      if l > 0 {
+        *to = make([]{{ $gt }}, l)
       }
 
-      ptr := unsafe.Pointer(to)
       {{ if or (eq $bt "AnyType")  (eq $bt "ZeroType") }}
         unfolder := newUnfolderArrIfc()
       {{ else }}

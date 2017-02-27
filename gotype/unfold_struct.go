@@ -154,6 +154,10 @@ func (u *unfolderStruct) OnObjectFinished(ctx *unfoldCtx) error {
 func (u *unfolderStruct) OnChildObjectDone(ctx *unfoldCtx) error { return nil }
 func (u *unfolderStruct) OnChildArrayDone(ctx *unfoldCtx) error  { return nil }
 
+func (u *unfolderStruct) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, bytes2Str(key))
+}
+
 func (u *unfolderStruct) OnKey(ctx *unfoldCtx, key string) error {
 	field, exists := u.fields[key]
 	if !exists {

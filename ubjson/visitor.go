@@ -69,6 +69,10 @@ func (vs *Visitor) OnObjectFinished() error {
 }
 
 func (vs *Visitor) OnKey(s string) error {
+	return vs.string(str2Bytes(s), false)
+}
+
+func (vs *Visitor) OnKeyRef(s []byte) error {
 	return vs.string(s, false)
 }
 
@@ -91,14 +95,21 @@ func (vs *Visitor) writeLen(l int) error {
 	return vs.onInt(l, true)
 }
 
-func (vs *Visitor) OnString(s string) error {
+func (vs *Visitor) OnStringRef(s []byte) error {
 	if len(s) == 0 {
 		return vs.OnNil()
 	}
 	return vs.string(s, true)
 }
 
-func (vs *Visitor) string(s string, marker bool) error {
+func (vs *Visitor) OnString(s string) error {
+	if len(s) == 0 {
+		return vs.OnNil()
+	}
+	return vs.string(str2Bytes(s), true)
+}
+
+func (vs *Visitor) string(s []byte, marker bool) error {
 	if marker {
 		if err := vs.writeByte(stringMarker); err != nil {
 			return err
@@ -107,7 +118,7 @@ func (vs *Visitor) string(s string, marker bool) error {
 	if err := vs.writeLen(len(s)); err != nil {
 		return err
 	}
-	return vs.w.write(str2Bytes(s))
+	return vs.w.write(s)
 }
 
 func (vs *Visitor) OnBool(b bool) error {
@@ -335,7 +346,7 @@ func (vs *Visitor) OnStringArray(a []string) error {
 		return err
 	}
 	for _, v := range a {
-		if err := vs.string(v, false); err != nil {
+		if err := vs.string(str2Bytes(v), false); err != nil {
 			return err
 		}
 	}
@@ -616,10 +627,10 @@ func (vs *Visitor) OnStringObject(m map[string]string) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
-		if err := vs.string(v, false); err != nil {
+		if err := vs.string(str2Bytes(v), false); err != nil {
 			return err
 		}
 	}
@@ -636,7 +647,7 @@ func (vs *Visitor) OnBoolObject(m map[string]bool) error {
 	}
 
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.OnBool(v); err != nil {
@@ -655,7 +666,7 @@ func (vs *Visitor) OnInt8Object(m map[string]int8) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.int8(v, false); err != nil {
@@ -674,7 +685,7 @@ func (vs *Visitor) OnInt16Object(m map[string]int16) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.int16(v, false); err != nil {
@@ -693,7 +704,7 @@ func (vs *Visitor) OnInt32Object(m map[string]int32) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.int32(v, false); err != nil {
@@ -713,7 +724,7 @@ func (vs *Visitor) OnInt64Object(m map[string]int64) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.int64(v, false); err != nil {
@@ -739,13 +750,16 @@ func (vs *Visitor) OnIntObject(m map[string]int) error {
 	}
 	for k, v := range m {
 		var err error
-		if err = vs.string(k, false); err != nil {
+		if err = vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if isInt64 {
 			err = vs.int64(int64(v), false)
 		} else {
 			err = vs.int32(int32(v), false)
+		}
+		if err != nil {
+			return err
 		}
 	}
 
@@ -761,7 +775,7 @@ func (vs *Visitor) OnUint8Object(m map[string]uint8) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.uint8(v, false); err != nil {
@@ -788,7 +802,7 @@ func (vs *Visitor) OnUint16Object(m map[string]uint16) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.uint64(uint64(v), minT, false); err != nil {
@@ -815,7 +829,7 @@ func (vs *Visitor) OnUint32Object(m map[string]uint32) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.uint64(uint64(v), minT, false); err != nil {
@@ -842,7 +856,7 @@ func (vs *Visitor) OnUint64Object(m map[string]uint64) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.uint64(uint64(v), minT, false); err != nil {
@@ -869,7 +883,7 @@ func (vs *Visitor) OnUintObject(m map[string]uint) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.uint64(uint64(v), minT, false); err != nil {
@@ -888,7 +902,7 @@ func (vs *Visitor) OnFloat32Object(m map[string]float32) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.float32(v, false); err != nil {
@@ -908,7 +922,7 @@ func (vs *Visitor) OnFloat64Object(m map[string]float64) error {
 		return err
 	}
 	for k, v := range m {
-		if err := vs.string(k, false); err != nil {
+		if err := vs.string(str2Bytes(k), false); err != nil {
 			return err
 		}
 		if err := vs.float64(v, false); err != nil {

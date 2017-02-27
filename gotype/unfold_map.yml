@@ -75,6 +75,9 @@ templates.makeTypeWithName: |
     return nil
   }
 
+  func (u *{{ $keyName }} ) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+    return u.OnKey(ctx, string(key))
+  }
 
   func (u *{{ $keyName }} ) OnKey(ctx *unfoldCtx, key string) error {
     ctx.key.push(key)
@@ -113,6 +116,7 @@ templates.mapIfc: |
     switch bt {
     {{ range $bt, $gt := data.mapTypes }}
     case structform.{{ $bt }}:
+      ctx.buf.release()
       return *(*map[string]{{ $gt }})(child), nil
     {{ end }}
     default:
@@ -124,13 +128,15 @@ templates.mapIfc: |
     switch bt {
     {{ range $bt, $gt := data.mapTypes }}
     case structform.{{ $bt }}:
-      to := new(map[string]{{ $gt }})
+      sz := unsafe.Sizeof(map[string]{{ $gt }}{})
+      ptr := ctx.buf.alloc(int(sz))
+      to := (*map[string]{{ $gt }})(ptr)
       {{ if or (eq $bt "AnyType")  (eq $bt "ZeroType") }}
         unfolder := newUnfolderMapIfc()
       {{ else }}
         unfolder := newUnfolderMap{{ $gt | capitalize }}()
       {{ end }}
-      return to, unsafe.Pointer(to), unfolder
+      return to, ptr, unfolder
     {{ end }}
     default:
       panic("invalid type code")

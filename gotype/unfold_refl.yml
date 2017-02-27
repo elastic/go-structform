@@ -56,6 +56,10 @@ templates.makeReflPrimitives: |
     return err
   }
 
+  func (u *{{ $type }}) OnStringRef(ctx *unfoldCtx, v []byte) error {
+    return u.OnString(ctx, string(v))
+  }
+
   {{ range data.primitiveTypes }}
     func (u *{{ $type }}) On{{ . | capitalize}}(ctx *unfoldCtx, v {{ . }}) error {
       elem := u.prepare(ctx)
@@ -104,9 +108,14 @@ templates.makeReflChildObjects: |
     return {{ $error }}
   }
 
+  func (u *{{ $type }}) OnKeyRef(_ *unfoldCtx, _ []byte) error {
+    return {{ $error }}
+  }
+
   func (u *{{ $type }}) OnChildObjectDone(ctx *unfoldCtx) error {
     {{ if $process }}
       u.{{ $process }}(ctx)
     {{ end }}
     return nil
   }
+  

@@ -10,7 +10,8 @@ import (
 )
 
 type Parser struct {
-	visitor structform.Visitor
+	visitor    structform.Visitor
+	strVisitor structform.StringRefVisitor
 
 	// last fail state
 	err error
@@ -121,7 +122,8 @@ func ParseString(str string, vs structform.Visitor) error {
 
 func NewParser(vs structform.Visitor) *Parser {
 	p := &Parser{
-		visitor: vs,
+		visitor:    vs,
+		strVisitor: structform.MakeStringRefVisitor(vs),
 	}
 	p.buffer = p.buffer0[:0]
 	p.length.stack = p.length.stack0[:0]
@@ -297,7 +299,7 @@ func (p *Parser) stepString(b []byte) ([]byte, error) {
 		var tmp []byte
 		if b, tmp = p.collect(b, int(L)); tmp != nil {
 			p.popLenState()
-			err = p.visitor.OnString(bytes2Str(tmp))
+			err = p.strVisitor.OnStringRef(tmp)
 		}
 	}
 
@@ -469,7 +471,7 @@ func (p *Parser) stepObjectDyn(b []byte) ([]byte, error) {
 		var tmp []byte
 		if b, tmp = p.collect(b, int(L)); tmp != nil {
 			p.popLen()
-			err = p.visitor.OnKey(bytes2Str(tmp))
+			err = p.strVisitor.OnKeyRef(tmp)
 		}
 		st.stateStep = stCont
 	case stCont:
@@ -544,7 +546,7 @@ func (p *Parser) stepObjectCountedContent(b []byte, typed bool) (bool, []byte, e
 		var tmp []byte
 		if b, tmp = p.collect(b, int(L)); tmp != nil {
 			p.popLen()
-			err = p.visitor.OnKey(bytes2Str(tmp))
+			err = p.strVisitor.OnKeyRef(tmp)
 		}
 		st.stateStep = stCont
 

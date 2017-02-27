@@ -151,6 +151,10 @@ func (u *unfolderReflMapOnKey) OnKey(ctx *unfoldCtx, key string) error {
 	return nil
 }
 
+func (u *unfolderReflMapOnKey) OnKeyRef(ctx *unfoldCtx, key []byte) error {
+	return u.OnKey(ctx, string(key))
+}
+
 func (u *unfolderReflMapOnKey) OnObjectFinished(ctx *unfoldCtx) error {
 	ctx.unfolder.pop()
 	ctx.value.pop()
@@ -160,8 +164,10 @@ func (u *unfolderReflMapOnKey) OnObjectFinished(ctx *unfoldCtx) error {
 func (u *unfolderReflMapOnElem) prepare(ctx *unfoldCtx) reflect.Value {
 	ptr := ctx.value.current
 	v := ptr.Elem()
+	et := v.Type().Elem()
 
-	target := reflect.New(v.Type().Elem())
+	targetPtr := ctx.buf.alloc(int(et.Size()))
+	target := reflect.NewAt(et, targetPtr)
 	ctx.value.push(target)
 	return target
 }
@@ -174,6 +180,7 @@ func (u *unfolderReflMapOnElem) process(ctx *unfoldCtx) {
 	m := ptr.Elem()
 	m.SetMapIndex(reflect.ValueOf(ctx.key.pop()), v)
 
+	ctx.buf.release()
 	ctx.unfolder.current = u.shared.waitKey
 }
 

@@ -1231,6 +1231,9 @@ func (u *unfolderArrIfc) OnNil(ctx *unfoldCtx) error {
 func (u *unfolderArrIfc) OnBool(ctx *unfoldCtx, v bool) error { return u.append(ctx, v) }
 
 func (u *unfolderArrIfc) OnString(ctx *unfoldCtx, v string) error { return u.append(ctx, v) }
+func (u *unfolderArrIfc) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.OnString(ctx, string(v))
+}
 
 func (u *unfolderArrIfc) OnByte(ctx *unfoldCtx, v byte) error {
 	return u.append(ctx, (interface{})(v))
@@ -1319,6 +1322,9 @@ func (u *unfolderArrString) OnNil(ctx *unfoldCtx) error {
 }
 
 func (u *unfolderArrString) OnString(ctx *unfoldCtx, v string) error { return u.append(ctx, v) }
+func (u *unfolderArrString) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.OnString(ctx, string(v))
+}
 
 func (u *unfolderArrUint) OnNil(ctx *unfoldCtx) error {
 	return u.append(ctx, 0)
@@ -2006,54 +2012,71 @@ func unfoldIfcFinishSubArray(ctx *unfoldCtx) (interface{}, error) {
 	switch bt {
 
 	case structform.AnyType:
+		ctx.buf.release()
 		return *(*[]interface{})(child), nil
 
 	case structform.BoolType:
+		ctx.buf.release()
 		return *(*[]bool)(child), nil
 
 	case structform.ByteType:
+		ctx.buf.release()
 		return *(*[]uint8)(child), nil
 
 	case structform.Float32Type:
+		ctx.buf.release()
 		return *(*[]float32)(child), nil
 
 	case structform.Float64Type:
+		ctx.buf.release()
 		return *(*[]float64)(child), nil
 
 	case structform.Int16Type:
+		ctx.buf.release()
 		return *(*[]int16)(child), nil
 
 	case structform.Int32Type:
+		ctx.buf.release()
 		return *(*[]int32)(child), nil
 
 	case structform.Int64Type:
+		ctx.buf.release()
 		return *(*[]int64)(child), nil
 
 	case structform.Int8Type:
+		ctx.buf.release()
 		return *(*[]int8)(child), nil
 
 	case structform.IntType:
+		ctx.buf.release()
 		return *(*[]int)(child), nil
 
 	case structform.StringType:
+		ctx.buf.release()
 		return *(*[]string)(child), nil
 
 	case structform.Uint16Type:
+		ctx.buf.release()
 		return *(*[]uint16)(child), nil
 
 	case structform.Uint32Type:
+		ctx.buf.release()
 		return *(*[]uint32)(child), nil
 
 	case structform.Uint64Type:
+		ctx.buf.release()
 		return *(*[]uint64)(child), nil
 
 	case structform.Uint8Type:
+		ctx.buf.release()
 		return *(*[]uint8)(child), nil
 
 	case structform.UintType:
+		ctx.buf.release()
 		return *(*[]uint)(child), nil
 
 	case structform.ZeroType:
+		ctx.buf.release()
 		return *(*[]interface{})(child), nil
 
 	default:
@@ -2065,255 +2088,221 @@ func makeArrayPtr(ctx *unfoldCtx, l int, bt structform.BaseType) (interface{}, u
 	switch bt {
 
 	case structform.AnyType:
-		var to *[]interface{}
-		if l <= 0 {
-			to = new([]interface{})
-		} else {
-			tmp := make([]interface{}, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]interface{}{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]interface{})(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]interface{}, l)
+		}
 
 		unfolder := newUnfolderArrIfc()
 
 		return to, ptr, unfolder
 
 	case structform.BoolType:
-		var to *[]bool
-		if l <= 0 {
-			to = new([]bool)
-		} else {
-			tmp := make([]bool, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]bool{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]bool)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]bool, l)
+		}
 
 		unfolder := newUnfolderArrBool()
 
 		return to, ptr, unfolder
 
 	case structform.ByteType:
-		var to *[]uint8
-		if l <= 0 {
-			to = new([]uint8)
-		} else {
-			tmp := make([]uint8, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]uint8{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]uint8)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]uint8, l)
+		}
 
 		unfolder := newUnfolderArrUint8()
 
 		return to, ptr, unfolder
 
 	case structform.Float32Type:
-		var to *[]float32
-		if l <= 0 {
-			to = new([]float32)
-		} else {
-			tmp := make([]float32, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]float32{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]float32)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]float32, l)
+		}
 
 		unfolder := newUnfolderArrFloat32()
 
 		return to, ptr, unfolder
 
 	case structform.Float64Type:
-		var to *[]float64
-		if l <= 0 {
-			to = new([]float64)
-		} else {
-			tmp := make([]float64, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]float64{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]float64)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]float64, l)
+		}
 
 		unfolder := newUnfolderArrFloat64()
 
 		return to, ptr, unfolder
 
 	case structform.Int16Type:
-		var to *[]int16
-		if l <= 0 {
-			to = new([]int16)
-		} else {
-			tmp := make([]int16, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]int16{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]int16)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]int16, l)
+		}
 
 		unfolder := newUnfolderArrInt16()
 
 		return to, ptr, unfolder
 
 	case structform.Int32Type:
-		var to *[]int32
-		if l <= 0 {
-			to = new([]int32)
-		} else {
-			tmp := make([]int32, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]int32{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]int32)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]int32, l)
+		}
 
 		unfolder := newUnfolderArrInt32()
 
 		return to, ptr, unfolder
 
 	case structform.Int64Type:
-		var to *[]int64
-		if l <= 0 {
-			to = new([]int64)
-		} else {
-			tmp := make([]int64, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]int64{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]int64)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]int64, l)
+		}
 
 		unfolder := newUnfolderArrInt64()
 
 		return to, ptr, unfolder
 
 	case structform.Int8Type:
-		var to *[]int8
-		if l <= 0 {
-			to = new([]int8)
-		} else {
-			tmp := make([]int8, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]int8{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]int8)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]int8, l)
+		}
 
 		unfolder := newUnfolderArrInt8()
 
 		return to, ptr, unfolder
 
 	case structform.IntType:
-		var to *[]int
-		if l <= 0 {
-			to = new([]int)
-		} else {
-			tmp := make([]int, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]int{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]int)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]int, l)
+		}
 
 		unfolder := newUnfolderArrInt()
 
 		return to, ptr, unfolder
 
 	case structform.StringType:
-		var to *[]string
-		if l <= 0 {
-			to = new([]string)
-		} else {
-			tmp := make([]string, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]string{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]string)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]string, l)
+		}
 
 		unfolder := newUnfolderArrString()
 
 		return to, ptr, unfolder
 
 	case structform.Uint16Type:
-		var to *[]uint16
-		if l <= 0 {
-			to = new([]uint16)
-		} else {
-			tmp := make([]uint16, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]uint16{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]uint16)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]uint16, l)
+		}
 
 		unfolder := newUnfolderArrUint16()
 
 		return to, ptr, unfolder
 
 	case structform.Uint32Type:
-		var to *[]uint32
-		if l <= 0 {
-			to = new([]uint32)
-		} else {
-			tmp := make([]uint32, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]uint32{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]uint32)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]uint32, l)
+		}
 
 		unfolder := newUnfolderArrUint32()
 
 		return to, ptr, unfolder
 
 	case structform.Uint64Type:
-		var to *[]uint64
-		if l <= 0 {
-			to = new([]uint64)
-		} else {
-			tmp := make([]uint64, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]uint64{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]uint64)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]uint64, l)
+		}
 
 		unfolder := newUnfolderArrUint64()
 
 		return to, ptr, unfolder
 
 	case structform.Uint8Type:
-		var to *[]uint8
-		if l <= 0 {
-			to = new([]uint8)
-		} else {
-			tmp := make([]uint8, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]uint8{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]uint8)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]uint8, l)
+		}
 
 		unfolder := newUnfolderArrUint8()
 
 		return to, ptr, unfolder
 
 	case structform.UintType:
-		var to *[]uint
-		if l <= 0 {
-			to = new([]uint)
-		} else {
-			tmp := make([]uint, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]uint{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]uint)(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]uint, l)
+		}
 
 		unfolder := newUnfolderArrUint()
 
 		return to, ptr, unfolder
 
 	case structform.ZeroType:
-		var to *[]interface{}
-		if l <= 0 {
-			to = new([]interface{})
-		} else {
-			tmp := make([]interface{}, l)
-			to = &tmp
-		}
+		sz := unsafe.Sizeof([]interface{}{})
+		ptr := ctx.buf.alloc(int(sz))
+		to := (*[]interface{})(ptr)
 
-		ptr := unsafe.Pointer(to)
+		if l > 0 {
+			*to = make([]interface{}, l)
+		}
 
 		unfolder := newUnfolderArrIfc()
 

@@ -74,6 +74,9 @@ templates.onBool: |
 # onString(name, fn)
 templates.onString: |
   func (u *{{ .name }}) OnString(ctx *unfoldCtx, v string) error { return u.{{ .fn }} (ctx, v) }
+  func (u *{{ .name }}) OnStringRef(ctx *unfoldCtx, v []byte) error {
+    return u.OnString(ctx, string(v))
+  }
 
 
 # onNil(name, fn, default)

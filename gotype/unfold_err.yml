@@ -20,6 +20,7 @@ main: |
   func (*{{ $name }}) OnNil(*unfoldCtx) error { return {{ $err }} }
   func (*{{ $name }}) OnBool(*unfoldCtx, bool) error { return {{ $err }} }
   func (*{{ $name }}) OnString(*unfoldCtx, string) error { return {{ $err }} }
+  func (*{{ $name }}) OnStringRef(*unfoldCtx, []byte) error { return {{ $err }} }
   func (*{{ $name }}) OnInt8(*unfoldCtx, int8) error { return {{ $err }} }
   func (*{{ $name }}) OnInt16(*unfoldCtx, int16) error { return {{ $err }} }
   func (*{{ $name }}) OnInt32(*unfoldCtx, int32) error { return {{ $err }} }
@@ -39,6 +40,7 @@ main: |
   func (*{{ $name }}) OnObjectStart(*unfoldCtx, int, structform.BaseType) error { return {{ $err }} }
   func (*{{ $name }}) OnObjectFinished(*unfoldCtx) error { return {{ $err }} }
   func (*{{ $name }}) OnKey(*unfoldCtx, string) error { return {{ $err }} }
+  func (*{{ $name }}) OnKeyRef(*unfoldCtx, []byte) error { return {{ $err }} }
   func (*{{ $name }}) OnChildObjectDone(*unfoldCtx) error { return {{ $err }} }
 
   {{ end }}

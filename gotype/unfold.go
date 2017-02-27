@@ -15,6 +15,8 @@ type Unfolder struct {
 type unfoldCtx struct {
 	opts options
 
+	buf buffer
+
 	unfolder unfolderStack
 	value    reflectValueStack
 	baseType structformTypeStack
@@ -36,6 +38,7 @@ type unfolder interface {
 	OnNil(*unfoldCtx) error
 	OnBool(*unfoldCtx, bool) error
 	OnString(*unfoldCtx, string) error
+	OnStringRef(*unfoldCtx, []byte) error
 	OnInt8(*unfoldCtx, int8) error
 	OnInt16(*unfoldCtx, int16) error
 	OnInt32(*unfoldCtx, int32) error
@@ -59,6 +62,7 @@ type unfolder interface {
 	OnObjectStart(*unfoldCtx, int, structform.BaseType) error
 	OnObjectFinished(*unfoldCtx) error
 	OnKey(*unfoldCtx, string) error
+	OnKeyRef(*unfoldCtx, []byte) error
 	OnChildObjectDone(*unfoldCtx) error
 }
 
@@ -79,6 +83,9 @@ func NewUnfolder(to interface{}) (*Unfolder, error) {
 	u.key.init()
 	u.idx.init()
 	u.baseType.init()
+
+	// TODO: make allocation buffer size configurable
+	u.buf.init(1024)
 
 	err := u.setTarget(to)
 	if err != nil {
@@ -136,6 +143,10 @@ func (u *unfoldCtx) OnKey(s string) error {
 	return u.unfolder.current.OnKey(u, s)
 }
 
+func (u *unfoldCtx) OnKeyRef(s []byte) error {
+	return u.unfolder.current.OnKeyRef(u, s)
+}
+
 func (u *unfoldCtx) OnArrayStart(len int, baseType structform.BaseType) error {
 	return u.unfolder.current.OnArrayStart(u, len, baseType)
 }
@@ -165,6 +176,10 @@ func (u *unfoldCtx) OnBool(b bool) error {
 
 func (u *unfoldCtx) OnString(s string) error {
 	return u.unfolder.current.OnString(u, s)
+}
+
+func (u *unfoldCtx) OnStringRef(s []byte) error {
+	return u.unfolder.current.OnStringRef(u, s)
 }
 
 func (u *unfoldCtx) OnInt8(i int8) error {

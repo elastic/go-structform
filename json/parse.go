@@ -15,7 +15,8 @@ import (
 )
 
 type Parser struct {
-	visitor structform.Visitor
+	visitor    structform.Visitor
+	strVisitor structform.StringRefVisitor
 
 	// last fail state
 	err error
@@ -102,6 +103,7 @@ func ParseString(str string, vs structform.Visitor) error {
 func NewParser(vs structform.Visitor) *Parser {
 	p := &Parser{
 		visitor:      vs,
+		strVisitor:   structform.MakeStringRefVisitor(vs),
 		currentState: startState,
 	}
 	p.states = p.statesBuf[:0]
@@ -319,10 +321,15 @@ func (p *Parser) stepDict(b []byte, allowEnd bool) ([]byte, error) {
 }
 
 func (p *Parser) stepDictKey(b []byte) ([]byte, error) {
-	str, done, b, err := p.doString(b)
+	ref, allocated, done, b, err := p.doString(b)
 	if done && err == nil {
 		p.currentState = dictFieldValueSep
-		err = p.visitor.OnKey(str)
+
+		if !allocated {
+			err = p.strVisitor.OnKeyRef(ref)
+		} else {
+			err = p.visitor.OnKey(bytes2Str(ref))
+		}
 	}
 	return b, err
 }
@@ -393,15 +400,20 @@ func (p *Parser) endArray(b []byte) ([]byte, error) {
 }
 
 func (p *Parser) stepString(b []byte) ([]byte, error) {
-	str, done, b, err := p.doString(b)
+	ref, allocated, done, b, err := p.doString(b)
 	if done && err == nil {
 		p.popState()
-		err = p.visitor.OnString(str)
+
+		if !allocated {
+			err = p.strVisitor.OnStringRef(ref)
+		} else {
+			err = p.visitor.OnString(bytes2Str(ref))
+		}
 	}
 	return b, err
 }
 
-func (p *Parser) doString(b []byte) (string, bool, []byte, error) {
+func (p *Parser) doString(b []byte) ([]byte, bool, bool, []byte, error) {
 	stop := -1
 	done := false
 
@@ -431,7 +443,7 @@ func (p *Parser) doString(b []byte) (string, bool, []byte, error) {
 
 	if !done {
 		p.literalBuffer = append(p.literalBuffer, b...)
-		return "", false, nil, nil
+		return nil, false, false, nil, nil
 	}
 
 	rest := b[stop:]
@@ -446,16 +458,10 @@ func (p *Parser) doString(b []byte) (string, bool, []byte, error) {
 	b = b[1 : len(b)-1]
 	b, allocated, err = p.unquote(b)
 	if err != nil {
-		return "", false, nil, nil
+		return nil, false, false, nil, nil
 	}
 
-	var s string
-	if allocated {
-		s = bytes2Str(b)
-	} else {
-		s = string(b)
-	}
-	return s, done, rest, nil
+	return b, allocated, done, rest, nil
 }
 
 func (p *Parser) unquote(in []byte) ([]byte, bool, error) {
