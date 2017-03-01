@@ -2,11 +2,9 @@ package gotype
 
 import (
 	"bytes"
-	gojson "encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/urso/go-structform/json"
 )
 
@@ -240,21 +238,6 @@ var unfoldSamples = []struct {
 }
 
 func TestFoldUnfoldConsistent(t *testing.T) {
-
-	normalize := func(in string) (interface{}, error) {
-		var tmp interface{}
-		if err := gojson.Unmarshal([]byte(in), &tmp); err != nil {
-			return nil, err
-		}
-
-		b, err := gojson.MarshalIndent(tmp, "", "  ")
-		if err != nil {
-			return nil, err
-		}
-
-		return string(b), nil
-	}
-
 	tests := unfoldSamples
 	for i, test := range tests {
 		t.Logf("run test (%v): %v (%T -> %T)", i, test.json, test.input, test.value)
@@ -282,20 +265,8 @@ func TestFoldUnfoldConsistent(t *testing.T) {
 			continue
 		}
 
-		expected, err := normalize(test.json)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-
-		actual, err := normalize(buf.String())
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-
 		// compare conversions did preserve type
-		assert.Equal(t, expected, actual)
+		assertJSON(t, test.json, buf.String())
 	}
 }
 
