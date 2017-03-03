@@ -96,7 +96,7 @@ func (u *unfoldMapStartIfc) OnObjectStart(ctx *unfoldCtx, l int, baseType struct
 }
 
 func (u *unfoldMapKeyIfc) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyIfc) OnKey(ctx *unfoldCtx, key string) error {
@@ -178,7 +178,7 @@ func (u *unfoldMapStartBool) OnObjectStart(ctx *unfoldCtx, l int, baseType struc
 }
 
 func (u *unfoldMapKeyBool) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyBool) OnKey(ctx *unfoldCtx, key string) error {
@@ -260,7 +260,7 @@ func (u *unfoldMapStartString) OnObjectStart(ctx *unfoldCtx, l int, baseType str
 }
 
 func (u *unfoldMapKeyString) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyString) OnKey(ctx *unfoldCtx, key string) error {
@@ -342,7 +342,7 @@ func (u *unfoldMapStartUint) OnObjectStart(ctx *unfoldCtx, l int, baseType struc
 }
 
 func (u *unfoldMapKeyUint) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyUint) OnKey(ctx *unfoldCtx, key string) error {
@@ -424,7 +424,7 @@ func (u *unfoldMapStartUint8) OnObjectStart(ctx *unfoldCtx, l int, baseType stru
 }
 
 func (u *unfoldMapKeyUint8) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyUint8) OnKey(ctx *unfoldCtx, key string) error {
@@ -506,7 +506,7 @@ func (u *unfoldMapStartUint16) OnObjectStart(ctx *unfoldCtx, l int, baseType str
 }
 
 func (u *unfoldMapKeyUint16) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyUint16) OnKey(ctx *unfoldCtx, key string) error {
@@ -588,7 +588,7 @@ func (u *unfoldMapStartUint32) OnObjectStart(ctx *unfoldCtx, l int, baseType str
 }
 
 func (u *unfoldMapKeyUint32) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyUint32) OnKey(ctx *unfoldCtx, key string) error {
@@ -670,7 +670,7 @@ func (u *unfoldMapStartUint64) OnObjectStart(ctx *unfoldCtx, l int, baseType str
 }
 
 func (u *unfoldMapKeyUint64) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyUint64) OnKey(ctx *unfoldCtx, key string) error {
@@ -752,7 +752,7 @@ func (u *unfoldMapStartInt) OnObjectStart(ctx *unfoldCtx, l int, baseType struct
 }
 
 func (u *unfoldMapKeyInt) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyInt) OnKey(ctx *unfoldCtx, key string) error {
@@ -834,7 +834,7 @@ func (u *unfoldMapStartInt8) OnObjectStart(ctx *unfoldCtx, l int, baseType struc
 }
 
 func (u *unfoldMapKeyInt8) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyInt8) OnKey(ctx *unfoldCtx, key string) error {
@@ -916,7 +916,7 @@ func (u *unfoldMapStartInt16) OnObjectStart(ctx *unfoldCtx, l int, baseType stru
 }
 
 func (u *unfoldMapKeyInt16) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyInt16) OnKey(ctx *unfoldCtx, key string) error {
@@ -998,7 +998,7 @@ func (u *unfoldMapStartInt32) OnObjectStart(ctx *unfoldCtx, l int, baseType stru
 }
 
 func (u *unfoldMapKeyInt32) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyInt32) OnKey(ctx *unfoldCtx, key string) error {
@@ -1080,7 +1080,7 @@ func (u *unfoldMapStartInt64) OnObjectStart(ctx *unfoldCtx, l int, baseType stru
 }
 
 func (u *unfoldMapKeyInt64) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyInt64) OnKey(ctx *unfoldCtx, key string) error {
@@ -1162,7 +1162,7 @@ func (u *unfoldMapStartFloat32) OnObjectStart(ctx *unfoldCtx, l int, baseType st
 }
 
 func (u *unfoldMapKeyFloat32) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyFloat32) OnKey(ctx *unfoldCtx, key string) error {
@@ -1244,7 +1244,7 @@ func (u *unfoldMapStartFloat64) OnObjectStart(ctx *unfoldCtx, l int, baseType st
 }
 
 func (u *unfoldMapKeyFloat64) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfoldMapKeyFloat64) OnKey(ctx *unfoldCtx, key string) error {

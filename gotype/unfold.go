@@ -23,6 +23,8 @@ type unfoldCtx struct {
 	ptr      ptrStack
 	key      keyStack
 	idx      idxStack
+
+	keyCache symbolCache
 }
 
 type ptrUnfolder interface {
@@ -87,15 +89,21 @@ func NewUnfolder(to interface{}) (*Unfolder, error) {
 	// TODO: make allocation buffer size configurable
 	u.buf.init(1024)
 
-	err := u.setTarget(to)
-	if err != nil {
-		return nil, err
+	if to != nil {
+		err := u.SetTarget(to)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return u, nil
 }
 
-func (u *Unfolder) setTarget(to interface{}) error {
+func (u *Unfolder) EnableKeyCache(max int) {
+	u.keyCache.init(max)
+}
+
+func (u *Unfolder) SetTarget(to interface{}) error {
 	ctx := &u.unfoldCtx
 
 	if ptr, u := lookupGoTypeUnfolder(to); u != nil {

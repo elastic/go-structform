@@ -152,7 +152,7 @@ func (u *unfolderReflMapOnKey) OnKey(ctx *unfoldCtx, key string) error {
 }
 
 func (u *unfolderReflMapOnKey) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-	return u.OnKey(ctx, string(key))
+	return u.OnKey(ctx, ctx.keyCache.get(key))
 }
 
 func (u *unfolderReflMapOnKey) OnObjectFinished(ctx *unfoldCtx) error {

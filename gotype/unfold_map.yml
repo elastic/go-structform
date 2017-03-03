@@ -76,7 +76,7 @@ templates.makeTypeWithName: |
   }
 
   func (u *{{ $keyName }} ) OnKeyRef(ctx *unfoldCtx, key []byte) error {
-    return u.OnKey(ctx, string(key))
+    return u.OnKey(ctx, ctx.keyCache.get(key))
   }
 
   func (u *{{ $keyName }} ) OnKey(ctx *unfoldCtx, key string) error {
