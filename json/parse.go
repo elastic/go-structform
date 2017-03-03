@@ -101,14 +101,19 @@ func ParseString(str string, vs structform.Visitor) error {
 }
 
 func NewParser(vs structform.Visitor) *Parser {
-	p := &Parser{
+	p := &Parser{}
+	p.init(vs)
+	return p
+}
+
+func (p *Parser) init(vs structform.Visitor) {
+	*p = Parser{
 		visitor:      vs,
 		strVisitor:   structform.MakeStringRefVisitor(vs),
 		currentState: startState,
 	}
 	p.states = p.statesBuf[:0]
 	p.literalBuffer = p.literalBuffer0[:0]
-	return p
 }
 
 func (p *Parser) Parse(b []byte) error {
@@ -140,19 +145,39 @@ func (p *Parser) Write(b []byte) (int, error) {
 
 func (p *Parser) feed(b []byte) error {
 	for len(b) > 0 {
-		var err error
+		n, _, err := p.feedUntil(b)
+		if err != nil {
+			return err
+		}
 
+		b = b[n:]
+	}
+
+	return nil
+}
+
+func (p *Parser) feedUntil(b []byte) (int, bool, error) {
+	var (
+		err      error
+		reported bool
+		orig     = b
+	)
+
+	for !reported && len(b) > 0 {
 		switch p.currentState {
 		case failedState:
-			return p.err
+			if p.err == nil {
+				p.err = errors.New("invalid parser state")
+			}
+			return 0, false, p.err
 		case startState:
-			b, err = p.stepStart(b)
+			b, reported, err = p.stepStart(b)
 
 		case dictState:
-			b, err = p.stepDict(b, true)
+			b, reported, err = p.stepDict(b, true)
 
 		case dictNextFieldState:
-			b, err = p.stepDict(b, false)
+			b, reported, err = p.stepDict(b, false)
 
 		case dictFieldState:
 			b, err = p.stepDictKey(b)
@@ -167,45 +192,44 @@ func (p *Parser) feed(b []byte) error {
 			}
 
 		case dictFieldValue:
-			b, err = p.stepValue(b, dictFieldStateEnd)
+			b, reported, err = p.stepValue(b, dictFieldStateEnd)
 
 		case dictFieldStateEnd:
-			b, err = p.stepDictValueEnd(b)
+			b, reported, err = p.stepDictValueEnd(b)
 
 		case arrState:
-			b, err = p.stepArray(b, true)
+			b, reported, err = p.stepArray(b, true)
 
 		case arrStateValue:
-			b, err = p.stepValue(b, arrStateNext)
+			b, _, err = p.stepValue(b, arrStateNext)
 
 		case arrStateNext:
-			b, err = p.stepArrValueEnd(b)
+			b, reported, err = p.stepArrValueEnd(b)
 
 		case nullState:
-			b, err = p.stepNULL(b)
+			b, reported, err = p.stepNULL(b)
 
 		case trueState:
-			b, err = p.stepTRUE(b)
+			b, reported, err = p.stepTRUE(b)
 
 		case falseState:
-			b, err = p.stepFALSE(b)
+			b, reported, err = p.stepFALSE(b)
 
 		case stringState:
-			b, err = p.stepString(b)
+			b, reported, err = p.stepString(b)
 
 		case numberState:
-			b, err = p.stepNumber(b)
+			b, reported, err = p.stepNumber(b)
 
 		default:
-			return errFailing
+			return 0, false, errFailing
 		}
 
-		if err != nil {
-			return err
-		}
+		reported = reported && len(p.states) == 0
 	}
 
-	return nil
+	consumed := len(orig) - len(b)
+	return consumed, reported, err
 }
 
 func (p *Parser) finalize() error {
@@ -241,14 +265,14 @@ func (p *Parser) popState() {
 	}
 }
 
-func (p *Parser) stepStart(b []byte) ([]byte, error) {
+func (p *Parser) stepStart(b []byte) ([]byte, bool, error) {
 	return p.stepValue(b, p.currentState)
 }
 
-func (p *Parser) stepValue(b []byte, retState state) ([]byte, error) {
+func (p *Parser) stepValue(b []byte, retState state) ([]byte, bool, error) {
 	b = trimLeft(b)
 	if len(b) == 0 {
-		return b, nil
+		return b, false, nil
 	}
 
 	p.currentState = retState
@@ -256,11 +280,11 @@ func (p *Parser) stepValue(b []byte, retState state) ([]byte, error) {
 	switch c {
 	case '{': // start dictionary
 		p.pushState(dictState)
-		return b[1:], p.visitor.OnObjectStart(-1, structform.AnyType)
+		return b[1:], false, p.visitor.OnObjectStart(-1, structform.AnyType)
 
 	case '[': // start array
 		p.pushState(arrState)
-		return b[1:], p.visitor.OnArrayStart(-1, structform.AnyType)
+		return b[1:], false, p.visitor.OnArrayStart(-1, structform.AnyType)
 
 	case 'n': // parse "null"
 		p.pushState(nullState)
@@ -287,7 +311,7 @@ func (p *Parser) stepValue(b []byte, retState state) ([]byte, error) {
 		// parse number?
 		isNumber := c == '-' || c == '+' || c == '.' || isDigit(c)
 		if !isNumber {
-			return b, errUnknownChar
+			return b, false, errUnknownChar
 		}
 
 		p.literalBuffer = p.literalBuffer0[:0]
@@ -297,26 +321,26 @@ func (p *Parser) stepValue(b []byte, retState state) ([]byte, error) {
 	}
 }
 
-func (p *Parser) stepDict(b []byte, allowEnd bool) ([]byte, error) {
+func (p *Parser) stepDict(b []byte, allowEnd bool) ([]byte, bool, error) {
 	b = trimLeft(b)
 	if len(b) == 0 {
-		return b, nil
+		return b, false, nil
 	}
 
 	c := b[0]
 	switch c {
 	case '}':
 		if !allowEnd {
-			return nil, errUnexpectedDictClose
+			return nil, false, errUnexpectedDictClose
 		}
 		return p.endDict(b)
 
 	case '"':
 		p.currentState = dictFieldState
-		return b, nil
+		return b, false, nil
 
 	default:
-		return nil, errExpectedFieldName
+		return nil, false, errExpectedFieldName
 	}
 }
 
@@ -334,10 +358,10 @@ func (p *Parser) stepDictKey(b []byte) ([]byte, error) {
 	return b, err
 }
 
-func (p *Parser) stepDictValueEnd(b []byte) ([]byte, error) {
+func (p *Parser) stepDictValueEnd(b []byte) ([]byte, bool, error) {
 	b = trimLeft(b)
 	if len(b) == 0 {
-		return b, nil
+		return b, false, nil
 	}
 
 	c := b[0]
@@ -346,40 +370,40 @@ func (p *Parser) stepDictValueEnd(b []byte) ([]byte, error) {
 		return p.endDict(b)
 	case ',':
 		p.currentState = dictNextFieldState
-		return b[1:], nil
+		return b[1:], false, nil
 	default:
-		return nil, errUnknownChar
+		return nil, false, errUnknownChar
 	}
 }
 
-func (p *Parser) endDict(b []byte) ([]byte, error) {
+func (p *Parser) endDict(b []byte) ([]byte, bool, error) {
 	p.popState()
-	return b[1:], p.visitor.OnObjectFinished()
+	return b[1:], true, p.visitor.OnObjectFinished()
 }
 
-func (p *Parser) stepArray(b []byte, allowEnd bool) ([]byte, error) {
+func (p *Parser) stepArray(b []byte, allowEnd bool) ([]byte, bool, error) {
 	b = trimLeft(b)
 	if len(b) == 0 {
-		return b, nil
+		return b, false, nil
 	}
 
 	c := b[0]
 	switch c {
 	case ']':
 		if !allowEnd {
-			return nil, errUnexpectedArrClose
+			return nil, false, errUnexpectedArrClose
 		}
 		return p.endArray(b)
 	}
 
 	p.currentState = arrStateValue
-	return b, nil
+	return b, false, nil
 }
 
-func (p *Parser) stepArrValueEnd(b []byte) ([]byte, error) {
+func (p *Parser) stepArrValueEnd(b []byte) ([]byte, bool, error) {
 	b = trimLeft(b)
 	if len(b) == 0 {
-		return b, nil
+		return b, false, nil
 	}
 
 	c := b[0]
@@ -388,18 +412,18 @@ func (p *Parser) stepArrValueEnd(b []byte) ([]byte, error) {
 		return p.endArray(b)
 	case ',':
 		p.currentState = arrStateValue
-		return b[1:], nil
+		return b[1:], false, nil
 	default:
-		return nil, errUnknownChar
+		return nil, false, errUnknownChar
 	}
 }
 
-func (p *Parser) endArray(b []byte) ([]byte, error) {
+func (p *Parser) endArray(b []byte) ([]byte, bool, error) {
 	p.popState()
-	return b[1:], p.visitor.OnArrayFinished()
+	return b[1:], true, p.visitor.OnArrayFinished()
 }
 
-func (p *Parser) stepString(b []byte) ([]byte, error) {
+func (p *Parser) stepString(b []byte) ([]byte, bool, error) {
 	ref, allocated, done, b, err := p.doString(b)
 	if done && err == nil {
 		p.popState()
@@ -410,7 +434,7 @@ func (p *Parser) stepString(b []byte) ([]byte, error) {
 			err = p.visitor.OnString(bytes2Str(ref))
 		}
 	}
-	return b, err
+	return b, done, err
 }
 
 func (p *Parser) doString(b []byte) ([]byte, bool, bool, []byte, error) {
@@ -458,7 +482,7 @@ func (p *Parser) doString(b []byte) ([]byte, bool, bool, []byte, error) {
 	b = b[1 : len(b)-1]
 	b, allocated, err = p.unquote(b)
 	if err != nil {
-		return nil, false, false, nil, nil
+		return nil, false, false, nil, err
 	}
 
 	return b, allocated, done, rest, nil
@@ -542,23 +566,23 @@ func (p *Parser) unquote(in []byte) ([]byte, bool, error) {
 				out[written] = in[i]
 				i++
 				written++
-			case '\b':
+			case 'b':
 				out[written] = '\b'
 				i++
 				written++
-			case '\f':
+			case 'f':
 				out[written] = '\f'
 				i++
 				written++
-			case '\n':
+			case 'n':
 				out[written] = '\n'
 				i++
 				written++
-			case '\r':
+			case 'r':
 				out[written] = '\r'
 				i++
 				written++
-			case '\t':
+			case 't':
 				out[written] = '\t'
 				i++
 				written++
@@ -608,7 +632,7 @@ func (p *Parser) unquote(in []byte) ([]byte, bool, error) {
 	return out[:written], allocated, nil
 }
 
-func (p *Parser) stepNumber(b []byte) ([]byte, error) {
+func (p *Parser) stepNumber(b []byte) ([]byte, bool, error) {
 	// search for char in stop-set
 	stop := -1
 	done := false
@@ -628,7 +652,7 @@ func (p *Parser) stepNumber(b []byte) ([]byte, error) {
 
 	if !done {
 		p.literalBuffer = append(p.literalBuffer, b...)
-		return nil, nil
+		return nil, false, nil
 	}
 
 	rest := b[stop:]
@@ -640,7 +664,7 @@ func (p *Parser) stepNumber(b []byte) ([]byte, error) {
 
 	err := p.reportNumber(b, p.isDouble)
 	p.popState()
-	return rest, err
+	return rest, true, err
 }
 
 func (p *Parser) reportNumber(b []byte, isDouble bool) error {
@@ -661,28 +685,28 @@ func (p *Parser) reportNumber(b []byte, isDouble bool) error {
 	return err
 }
 
-func (p *Parser) stepNULL(b []byte) ([]byte, error) {
+func (p *Parser) stepNULL(b []byte) ([]byte, bool, error) {
 	b, done, err := p.stepKind(b, []byte("null"), errExpectedNull)
 	if done {
 		err = p.visitor.OnNil()
 	}
-	return b, err
+	return b, done, err
 }
 
-func (p *Parser) stepTRUE(b []byte) ([]byte, error) {
+func (p *Parser) stepTRUE(b []byte) ([]byte, bool, error) {
 	b, done, err := p.stepKind(b, []byte("true"), errExpectedTrue)
 	if done {
 		err = p.visitor.OnBool(true)
 	}
-	return b, err
+	return b, done, err
 }
 
-func (p *Parser) stepFALSE(b []byte) ([]byte, error) {
+func (p *Parser) stepFALSE(b []byte) ([]byte, bool, error) {
 	b, done, err := p.stepKind(b, []byte("false"), errExpectedFalse)
 	if done {
 		err = p.visitor.OnBool(false)
 	}
-	return b, err
+	return b, done, err
 }
 
 func (p *Parser) stepKind(b []byte, kind []byte, err error) ([]byte, bool, error) {
