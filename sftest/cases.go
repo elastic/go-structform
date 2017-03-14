@@ -3,6 +3,7 @@ package sftest
 import structform "github.com/urso/go-structform"
 
 var Samples = []Recording{
+	// simple primitives
 	{NilRec{}},       // "null"
 	{BoolRec{true}},  // "true"
 	{BoolRec{false}}, // "false"
