@@ -290,7 +290,7 @@ func TestUnfoldJsonInto(t *testing.T) {
 		}
 
 		// check state valid by processing a second time
-		if err = un.setTarget(test.value); err != nil {
+		if err = un.SetTarget(test.value); err != nil {
 			t.Error(err)
 			continue
 		}
@@ -324,7 +324,7 @@ func BenchmarkUnfoldJsonInto(b *testing.B) {
 
 		b.Run(name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				un.setTarget(test.value)
+				un.SetTarget(test.value)
 				err := dec.ParseString(input)
 				if err != nil {
 					b.Error(err)
