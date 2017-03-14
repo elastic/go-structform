@@ -12,6 +12,8 @@ import (
 type Visitor struct {
 	w       writer
 	scratch [16]byte
+
+	length lengthStack
 }
 
 type writer struct {
@@ -33,7 +35,9 @@ func (w writer) write(b []byte) error {
 }
 
 func NewVisitor(out io.Writer) *Visitor {
-	return &Visitor{w: writer{out}}
+	v := &Visitor{w: writer{out}}
+	v.length.stack = v.length.stack0[:0]
+	return v
 }
 
 func (vs *Visitor) writeByte(b byte) error {
@@ -42,6 +46,8 @@ func (vs *Visitor) writeByte(b byte) error {
 }
 
 func (vs *Visitor) optionalCount(l int) error {
+	vs.length.push(int64(l))
+
 	if l <= 0 {
 		// don't add size if array is empty or size is unknown
 		return nil
@@ -65,7 +71,10 @@ func (vs *Visitor) OnObjectStart(l int, _ structform.BaseType) error {
 }
 
 func (vs *Visitor) OnObjectFinished() error {
-	return vs.writeByte(objEndMarker)
+	if vs.length.pop() <= 0 {
+		return vs.writeByte(objEndMarker)
+	}
+	return nil
 }
 
 func (vs *Visitor) OnKey(s string) error {
@@ -88,7 +97,10 @@ func (vs *Visitor) OnArrayStart(l int, t structform.BaseType) error {
 }
 
 func (vs *Visitor) OnArrayFinished() error {
-	return vs.writeByte(arrEndMarker)
+	if vs.length.pop() <= 0 {
+		return vs.writeByte(arrEndMarker)
+	}
+	return nil
 }
 
 func (vs *Visitor) writeLen(l int) error {
@@ -350,7 +362,7 @@ func (vs *Visitor) OnStringArray(a []string) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnBoolArray(a []bool) error {
@@ -364,7 +376,7 @@ func (vs *Visitor) OnBoolArray(a []bool) error {
 			return err
 		}
 	}
-	return vs.OnArrayFinished()
+	return nil
 }
 
 func (vs *Visitor) OnInt8Array(a []int8) error {
@@ -380,7 +392,7 @@ func (vs *Visitor) OnInt8Array(a []int8) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnInt16Array(a []int16) error {
@@ -396,7 +408,7 @@ func (vs *Visitor) OnInt16Array(a []int16) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnInt32Array(a []int32) error {
@@ -412,7 +424,7 @@ func (vs *Visitor) OnInt32Array(a []int32) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnInt64Array(a []int64) error {
@@ -428,7 +440,7 @@ func (vs *Visitor) OnInt64Array(a []int64) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnIntArray(a []int) error {
@@ -458,7 +470,7 @@ func (vs *Visitor) OnIntArray(a []int) error {
 		}
 	}
 
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnBytes(a []byte) error {
@@ -475,7 +487,7 @@ func (vs *Visitor) OnBytes(a []byte) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 
 }
 
@@ -492,7 +504,7 @@ func (vs *Visitor) OnUint8Array(a []uint8) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnUint16Array(a []uint16) error {
@@ -515,7 +527,7 @@ func (vs *Visitor) OnUint16Array(a []uint16) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnUint32Array(a []uint32) error {
@@ -538,7 +550,7 @@ func (vs *Visitor) OnUint32Array(a []uint32) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnUint64Array(a []uint64) error {
@@ -561,7 +573,7 @@ func (vs *Visitor) OnUint64Array(a []uint64) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnUintArray(a []uint) error {
@@ -584,7 +596,7 @@ func (vs *Visitor) OnUintArray(a []uint) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnFloat32Array(a []float32) error {
@@ -600,7 +612,7 @@ func (vs *Visitor) OnFloat32Array(a []float32) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnFloat64Array(a []float64) error {
@@ -616,7 +628,7 @@ func (vs *Visitor) OnFloat64Array(a []float64) error {
 			return err
 		}
 	}
-	return vs.writeByte(arrEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnStringObject(m map[string]string) error {
@@ -635,7 +647,7 @@ func (vs *Visitor) OnStringObject(m map[string]string) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnBoolObject(m map[string]bool) error {
@@ -655,7 +667,7 @@ func (vs *Visitor) OnBoolObject(m map[string]bool) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnInt8Object(m map[string]int8) error {
@@ -674,7 +686,7 @@ func (vs *Visitor) OnInt8Object(m map[string]int8) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnInt16Object(m map[string]int16) error {
@@ -693,7 +705,7 @@ func (vs *Visitor) OnInt16Object(m map[string]int16) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnInt32Object(m map[string]int32) error {
@@ -712,7 +724,7 @@ func (vs *Visitor) OnInt32Object(m map[string]int32) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnInt64Object(m map[string]int64) error {
@@ -732,7 +744,7 @@ func (vs *Visitor) OnInt64Object(m map[string]int64) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnIntObject(m map[string]int) error {
@@ -763,7 +775,7 @@ func (vs *Visitor) OnIntObject(m map[string]int) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnUint8Object(m map[string]uint8) error {
@@ -783,7 +795,7 @@ func (vs *Visitor) OnUint8Object(m map[string]uint8) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnUint16Object(m map[string]uint16) error {
@@ -810,7 +822,7 @@ func (vs *Visitor) OnUint16Object(m map[string]uint16) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnUint32Object(m map[string]uint32) error {
@@ -837,7 +849,7 @@ func (vs *Visitor) OnUint32Object(m map[string]uint32) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnUint64Object(m map[string]uint64) error {
@@ -864,7 +876,7 @@ func (vs *Visitor) OnUint64Object(m map[string]uint64) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnUintObject(m map[string]uint) error {
@@ -891,7 +903,7 @@ func (vs *Visitor) OnUintObject(m map[string]uint) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnFloat32Object(m map[string]float32) error {
@@ -910,7 +922,7 @@ func (vs *Visitor) OnFloat32Object(m map[string]float32) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) OnFloat64Object(m map[string]float64) error {
@@ -930,7 +942,7 @@ func (vs *Visitor) OnFloat64Object(m map[string]float64) error {
 		}
 	}
 
-	return vs.writeByte(objEndMarker)
+	return nil
 }
 
 func (vs *Visitor) onEmptyArray(l int) (bool, error) {

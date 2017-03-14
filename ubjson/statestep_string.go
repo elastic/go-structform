@@ -4,9 +4,9 @@ package ubjson
 
 import "fmt"
 
-const _stateStep_name = "stStartstNilstNoopstTruestFalsestInt8stUInt8stInt16stInt32stInt64stFloat32stFloat64stCharstWithLenstWithType0stWithType1stContstFieldNamestFieldNameLenstNextField"
+const _stateStep_name = "stStartstNilstNoopstTruestFalsestInt8stUInt8stInt16stInt32stInt64stFloat32stFloat64stCharstWithLenstWithType0stWithType1stContstFieldNamestFieldNameLen"
 
-var _stateStep_index = [...]uint8{0, 7, 12, 18, 24, 31, 37, 44, 51, 58, 65, 74, 83, 89, 98, 109, 120, 126, 137, 151, 162}
+var _stateStep_index = [...]uint8{0, 7, 12, 18, 24, 31, 37, 44, 51, 58, 65, 74, 83, 89, 98, 109, 120, 126, 137, 151}
 
 func (i stateStep) String() string {
 	if i >= stateStep(len(_stateStep_index)-1) {
