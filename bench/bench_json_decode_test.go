@@ -10,6 +10,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/ugorji/go/codec"
+	"github.com/urso/go-structform/cborl"
 	"github.com/urso/go-structform/gotype"
 	"github.com/urso/go-structform/json"
 	"github.com/urso/go-structform/ubjson"
@@ -43,6 +44,7 @@ func BenchmarkEncodeBeatsEvents(b *testing.B) {
 	b.Run("std-json", makeBenchmarkEncodeEvents(stdJSONEncoder, events))
 	b.Run("structform-json", makeBenchmarkEncodeEvents(structformJSONEncoder, events))
 	b.Run("structform-ubjson", makeBenchmarkEncodeEvents(structformUBJSONEncoder, events))
+	b.Run("structform-cborl", makeBenchmarkEncodeEvents(structformCBORLEncoder, events))
 }
 
 func stdJSONEncoder(w io.Writer) func(interface{}) error {
@@ -89,6 +91,12 @@ func structformJSONEncoder(w io.Writer) func(interface{}) error {
 
 func structformUBJSONEncoder(w io.Writer) func(interface{}) error {
 	vs := ubjson.NewVisitor(w)
+	folder := gotype.NewIterator(vs)
+	return folder.Fold
+}
+
+func structformCBORLEncoder(w io.Writer) func(interface{}) error {
+	vs := cborl.NewVisitor(w)
 	folder := gotype.NewIterator(vs)
 	return folder.Fold
 }
