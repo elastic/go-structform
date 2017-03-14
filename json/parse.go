@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"reflect"
 	"strconv"
 	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
-	"unsafe"
 
 	structform "github.com/urso/go-structform"
 )
@@ -129,10 +127,7 @@ func (p *Parser) Parse(b []byte) error {
 }
 
 func (p *Parser) ParseString(str string) error {
-	sh := *((*reflect.StringHeader)(unsafe.Pointer(&str)))
-	bh := reflect.SliceHeader{Data: sh.Data, Len: sh.Len, Cap: sh.Len}
-	b := *(*[]byte)(unsafe.Pointer(&bh))
-	return p.Parse(b)
+	return p.Parse(str2Bytes(str))
 }
 
 func (p *Parser) Write(b []byte) (int, error) {
