@@ -134,6 +134,22 @@ func (r *Recording) expand() Recording {
 	return to
 }
 
+func (r Recording) Assert(t *testing.T, expected Recording) {
+	exp, err := expected.ToJSON()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	act, err := r.ToJSON()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	assert.Equal(t, exp, act)
+}
+
 func (r Recording) ToJSON() (string, error) {
 	v, _, err := buildValue(r.expand())
 	if err != nil {
@@ -280,11 +296,6 @@ func TestEncodeParseConsistent(
 			t.Errorf("Failed to decode %#v with %v", target, err)
 		}
 
-		actual, err := sample.ToJSON()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		assert.Equal(t, expected, actual)
+		target.Assert(t, sample)
 	}
 }
