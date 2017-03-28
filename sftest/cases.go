@@ -77,22 +77,22 @@ var Samples = []Recording{
 	{Float64Rec{-3.14}},
 
 	// empty arrays `[]`
-	arr(0, structform.AnyType),
-	arr(-1, structform.AnyType),
+	Arr(0, structform.AnyType),
+	Arr(-1, structform.AnyType),
 
 	// nested empty array `[[]]`
-	arr(1, structform.AnyType,
-		arr(0, structform.AnyType),
+	Arr(1, structform.AnyType,
+		Arr(0, structform.AnyType),
 	),
-	arr(-1, structform.AnyType,
-		arr(0, structform.AnyType),
+	Arr(-1, structform.AnyType,
+		Arr(0, structform.AnyType),
 	),
-	arr(-1, structform.AnyType,
-		arr(-1, structform.AnyType),
+	Arr(-1, structform.AnyType,
+		Arr(-1, structform.AnyType),
 	),
 
 	// array with arbitrary values
-	arr(-1, structform.AnyType,
+	Arr(-1, structform.AnyType,
 		NilRec{},
 		BoolRec{true},
 		BoolRec{false},
@@ -102,7 +102,7 @@ var Samples = []Recording{
 		Float64Rec{7e+09},
 		StringRec{"test"},
 	),
-	arr(2, structform.AnyType,
+	Arr(2, structform.AnyType,
 		Int8Rec{1},
 		BoolRec{true},
 	),
@@ -114,35 +114,35 @@ var Samples = []Recording{
 	},
 
 	// empty object '{}'
-	obj(-1, structform.AnyType),
-	obj(0, structform.AnyType),
+	Obj(-1, structform.AnyType),
+	Obj(0, structform.AnyType),
 
-	obj(-1, structform.AnyType,
+	Obj(-1, structform.AnyType,
 		"a", NilRec{},
 	),
 
 	// objects
-	obj(-1, structform.AnyType,
+	Obj(-1, structform.AnyType,
 		"a", StringRec{"test"}),
-	obj(1, structform.StringType,
+	Obj(1, structform.StringType,
 		"a", StringRec{"test"}),
-	obj(-1, structform.AnyType,
+	Obj(-1, structform.AnyType,
 		"a", BoolRec{true},
 		"b", BoolRec{false},
 	),
-	obj(2, structform.AnyType,
+	Obj(2, structform.AnyType,
 		"a", BoolRec{true},
 		"b", BoolRec{false},
 	),
-	obj(-1, structform.BoolType,
+	Obj(-1, structform.BoolType,
 		"a", BoolRec{true},
 		"b", BoolRec{false},
 	),
-	obj(2, structform.BoolType,
+	Obj(2, structform.BoolType,
 		"a", BoolRec{true},
 		"b", BoolRec{false},
 	),
-	obj(-1, structform.AnyType,
+	Obj(-1, structform.AnyType,
 		"a", UintRec{1},
 		"b", Float64Rec{3.14},
 		"c", StringRec{"test"},
@@ -166,42 +166,42 @@ var Samples = []Recording{
 	},
 
 	// objects in array
-	arr(-1, structform.AnyType,
-		obj(-1, structform.AnyType)),
-	arr(1, structform.AnyType,
-		obj(0, structform.AnyType)),
-	arr(-1, structform.AnyType,
-		obj(-1, structform.AnyType,
+	Arr(-1, structform.AnyType,
+		Obj(-1, structform.AnyType)),
+	Arr(1, structform.AnyType,
+		Obj(0, structform.AnyType)),
+	Arr(-1, structform.AnyType,
+		Obj(-1, structform.AnyType,
 			"a", IntRec{-1},
 		),
-		obj(1, structform.UintType,
+		Obj(1, structform.UintType,
 			"a", UintRec{1},
 		),
 	),
-	arr(2, structform.AnyType,
-		obj(-1, structform.AnyType,
+	Arr(2, structform.AnyType,
+		Obj(-1, structform.AnyType,
 			"a", IntRec{-1},
 		),
-		obj(1, structform.UintType,
+		Obj(1, structform.UintType,
 			"a", UintRec{1},
 		),
 	),
 
 	// array in object
-	obj(-1, structform.AnyType,
-		"a", arr(3, structform.IntType,
+	Obj(-1, structform.AnyType,
+		"a", Arr(3, structform.IntType,
 			IntRec{1}, IntRec{2}, IntRec{3}),
 	),
-	obj(1, structform.AnyType,
-		"a", arr(3, structform.IntType,
+	Obj(1, structform.AnyType,
+		"a", Arr(3, structform.IntType,
 			IntRec{1}, IntRec{2}, IntRec{3}),
 	),
-	obj(1, structform.AnyType,
+	Obj(1, structform.AnyType,
 		"a", Int8ArrRec{[]int8{1, 2, 3}},
 	),
 }
 
-func arr(l int, t structform.BaseType, elems ...interface{}) []Record {
+func Arr(l int, t structform.BaseType, elems ...interface{}) []Record {
 	a := []Record{ArrayStartRec{l, t}}
 	for _, elem := range elems {
 		switch v := elem.(type) {
@@ -219,7 +219,7 @@ func arr(l int, t structform.BaseType, elems ...interface{}) []Record {
 	return append(a, ArrayFinishRec{})
 }
 
-func obj(l int, t structform.BaseType, kv ...interface{}) []Record {
+func Obj(l int, t structform.BaseType, kv ...interface{}) []Record {
 	if len(kv)%2 != 0 {
 		panic("invalid object")
 	}
