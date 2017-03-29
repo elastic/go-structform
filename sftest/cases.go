@@ -2,13 +2,21 @@ package sftest
 
 import structform "github.com/urso/go-structform"
 
-var Samples = []Recording{
+var Samples = concatSamples(
+	SamplesPrimitives,
+	SamplesArr,
+	SamplesObj,
+	SamplesCombinations,
+)
+
+var SamplesPrimitives = []Recording{
 	// simple primitives
 	{NilRec{}},       // "null"
 	{BoolRec{true}},  // "true"
 	{BoolRec{false}}, // "false"
 	{StringRec{"test"}},
 	{StringRec{`test with " being special`}},
+	{StringRec{""}},
 
 	// int types
 	{IntRec{8}},
@@ -75,7 +83,9 @@ var Samples = []Recording{
 	{Float32Rec{-3.14}},
 	{Float64Rec{3.14}},
 	{Float64Rec{-3.14}},
+}
 
+var SamplesArr = []Recording{
 	// empty arrays `[]`
 	Arr(0, structform.AnyType),
 	Arr(-1, structform.AnyType),
@@ -112,7 +122,9 @@ var Samples = []Recording{
 	{
 		StringArrRec{[]string{"a", "b", "c"}},
 	},
+}
 
+var SamplesObj = []Recording{
 	// empty object '{}'
 	Obj(-1, structform.AnyType),
 	Obj(0, structform.AnyType),
@@ -164,7 +176,9 @@ var Samples = []Recording{
 			"c": 3,
 		}},
 	},
+}
 
+var SamplesCombinations = []Recording{
 	// objects in array
 	Arr(-1, structform.AnyType,
 		Obj(-1, structform.AnyType)),
@@ -199,47 +213,4 @@ var Samples = []Recording{
 	Obj(1, structform.AnyType,
 		"a", Int8ArrRec{[]int8{1, 2, 3}},
 	),
-}
-
-func Arr(l int, t structform.BaseType, elems ...interface{}) []Record {
-	a := []Record{ArrayStartRec{l, t}}
-	for _, elem := range elems {
-		switch v := elem.(type) {
-		case Record:
-			a = append(a, v)
-		case []Record:
-			a = append(a, v...)
-		case Recording:
-			a = append(a, v...)
-		default:
-			panic("invalid key type")
-		}
-	}
-
-	return append(a, ArrayFinishRec{})
-}
-
-func Obj(l int, t structform.BaseType, kv ...interface{}) []Record {
-	if len(kv)%2 != 0 {
-		panic("invalid object")
-	}
-
-	a := []Record{ObjectStartRec{l, t}}
-	for i := 0; i < len(kv); i += 2 {
-		k := kv[i].(string)
-		a = append(a, ObjectKeyRec{k})
-
-		switch v := kv[i+1].(type) {
-		case Record:
-			a = append(a, v)
-		case []Record:
-			a = append(a, v...)
-		case Recording:
-			a = append(a, v...)
-		default:
-			panic("invalid key type")
-		}
-	}
-
-	return append(a, ObjectFinishRec{})
 }
