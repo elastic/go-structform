@@ -10,3 +10,4 @@ func errTODO() error {
 var errInvalidCode = errors.New("invalid type code")
 var errTextKeyRequired = errors.New("only text keys supported")
 var errIndefByteSeq = errors.New("text/bytes of indefinite length not supported")
+var errEmptyKey = errors.New("object keys must not be empty")

@@ -117,7 +117,16 @@ func (p *Parser) feedUntil(b []byte) (int, bool, error) {
 
 	for {
 		b, done, err = p.execStep(b)
-		if len(b) == 0 || done || err != nil {
+		if done || err != nil {
+			break
+		}
+
+		// continue parsing if input buffer is not empty, or structure with length
+		// fields must be initialized
+		// -> structures with length 0 will be reported immediately
+		contParse := len(b) != 0 ||
+			(p.state.current.major&(stStartX|stIndef)) == stStartX
+		if !contParse {
 			break
 		}
 	}
@@ -146,8 +155,44 @@ func (p *Parser) execStep(b []byte) ([]byte, bool, error) {
 		b, done, err = p.stepSingleFloat(b)
 	case codeDoubleFloat:
 		b, done, err = p.stepDoubleFloat(b)
+
+	case majorBytes | stStartX:
+		if p.length.current == 0 {
+			err = p.visitor.OnArrayStart(0, structform.ByteType)
+			if err == nil {
+				err = p.visitor.OnArrayFinished()
+				p.length.pop()
+				if err == nil {
+					done, err = p.popState()
+				}
+			}
+
+			break
+		}
+
+		p.state.current.major &= ^stStartX
+		if len(b) == 0 {
+			break
+		}
+		fallthrough
 	case majorBytes:
 		b, done, err = p.stepBytes(b)
+
+	case majorText | stStartX:
+		if p.length.current == 0 {
+			p.length.pop()
+			err = p.visitor.OnString("")
+			if err == nil {
+				done, err = p.popState()
+			}
+			break
+		}
+
+		p.state.current.major &= ^stStartX
+		if len(b) == 0 {
+			break
+		}
+		fallthrough
 	case majorText:
 		b, done, err = p.stepText(b)
 
@@ -170,8 +215,11 @@ func (p *Parser) execStep(b []byte) ([]byte, bool, error) {
 		fallthrough
 	case majorArr | stIndef:
 		if b[0] == codeBreak {
+			b = b[1:]
 			err = p.visitor.OnArrayFinished()
-			b, done = b[1:], p.popState()
+			if err == nil {
+				done, err = p.popState()
+			}
 		} else {
 			b, done, err = p.stepValue(b)
 		}
@@ -195,10 +243,21 @@ func (p *Parser) execStep(b []byte) ([]byte, bool, error) {
 	case majorMap | stIndef:
 		if b[0] == codeBreak {
 			err = p.visitor.OnObjectFinished()
-			b, done = b[1:], p.popState()
+			b = b[1:]
+			if err == nil {
+				done, err = p.popState()
+			}
 		} else {
 			b, done, err = p.initMapKey(b)
 		}
+	case stKey | stStartX:
+		if p.length.current == 0 {
+			err = errEmptyKey
+			break
+		}
+
+		p.state.current.major &= (^stStartX)
+		fallthrough
 	case stKey:
 		b, done, err = p.stepKey(b)
 	case stElem:
@@ -212,27 +271,40 @@ func (p *Parser) execStep(b []byte) ([]byte, bool, error) {
 	return b, done, err
 }
 
-func (p *Parser) popState() bool {
+func (p *Parser) popState() (bool, error) {
 	p.state.pop()
 	return p.onValue()
 }
 
-func (p *Parser) onValue() bool {
+func (p *Parser) onValue() (bool, error) {
 	switch p.state.current.major {
-	case majorArr, majorMap:
+	case majorArr:
 		p.length.current--
-		return false
+		_, done, err := p.arrayHandleLen()
+		return done, err
+
+	case majorMap:
+		p.length.current--
+		_, done, err := p.mapHandleLen()
+		return done, err
 	}
-	return true
+	return true, nil
 }
 
 func (p *Parser) stepValue(b []byte) ([]byte, bool, error) {
+	if len(b) == 0 {
+		return b, false, nil
+	}
+
 	major := b[0] & majorMask
 	switch major {
 	case majorUint:
 		if b[0] < len8b {
 			err := p.visitor.OnUint8(b[0])
-			done := p.onValue()
+			done := false
+			if err == nil {
+				done, err = p.onValue()
+			}
 			return b[1:], done, err
 		}
 
@@ -243,7 +315,10 @@ func (p *Parser) stepValue(b []byte) ([]byte, bool, error) {
 		minor := b[0] & minorMask
 		if v := minor; v < len8b {
 			err := p.visitor.OnInt8(int8(^v))
-			done := p.onValue()
+			done := false
+			if err == nil {
+				done, err = p.onValue()
+			}
 			return b[1:], done, err
 		}
 
@@ -266,18 +341,29 @@ func (p *Parser) stepValue(b []byte) ([]byte, bool, error) {
 		return nil, false, errTODO()
 
 	default:
+		var (
+			err  error
+			done bool
+		)
+
 		switch b[0] {
 		case codeFalse:
-			err := p.visitor.OnBool(false)
-			done := p.onValue()
+			err = p.visitor.OnBool(false)
+			if err == nil {
+				done, err = p.onValue()
+			}
 			return b[1:], done, err
 		case codeTrue:
-			err := p.visitor.OnBool(true)
-			done := p.onValue()
+			err = p.visitor.OnBool(true)
+			if err == nil {
+				done, err = p.onValue()
+			}
 			return b[1:], done, err
 		case codeNull, codeUndef:
-			err := p.visitor.OnNil()
-			done := p.onValue()
+			err = p.visitor.OnNil()
+			if err == nil {
+				done, err = p.onValue()
+			}
 			return b[1:], done, err
 		case codeHalfFloat:
 			return b[1:], false, errTODO()
@@ -312,7 +398,7 @@ func (p *Parser) stepUint(in []byte) (b []byte, done bool, err error) {
 	}
 
 	if done && err == nil {
-		done = p.popState()
+		done, err = p.popState()
 	}
 
 	return
@@ -352,7 +438,7 @@ func (p *Parser) stepBytes(b []byte) ([]byte, bool, error) {
 		err = p.visitor.OnArrayFinished()
 		p.length.pop()
 		if err == nil {
-			done = p.popState()
+			done, err = p.popState()
 		}
 	}
 	return b, done, err
@@ -364,41 +450,57 @@ func (p *Parser) stepText(b []byte) ([]byte, bool, error) {
 		return nil, false, nil
 	}
 
+	p.length.pop()
+
 	done := true
 	err := p.strVisitor.OnStringRef(tmp)
 	if err == nil {
-		done = p.popState()
+		done, err = p.popState()
 	}
 	return b, done, err
 }
 
 func (p *Parser) stepArray(b []byte) ([]byte, bool, error) {
-	if p.length.current == 0 {
-		err := p.visitor.OnArrayFinished()
-		if err != nil {
-			return nil, false, err
-		}
-
-		p.length.pop()
-		done := p.popState()
-		return b, done, nil
+	val, done, err := p.arrayHandleLen()
+	if val {
+		b, done, err = p.stepValue(b)
 	}
-	return p.stepValue(b)
+	return b, done, err
+}
+
+func (p *Parser) arrayHandleLen() (value, done bool, err error) {
+	if p.length.current > 0 {
+		return true, false, nil
+	}
+
+	err = p.visitor.OnArrayFinished()
+	if err == nil {
+		p.length.pop()
+		done, err = p.popState()
+	}
+
+	return false, done, err
 }
 
 func (p *Parser) stepMap(b []byte) ([]byte, bool, error) {
-	if p.length.current == 0 {
-		err := p.visitor.OnObjectFinished()
-		if err != nil {
-			return nil, false, err
-		}
+	kv, done, err := p.mapHandleLen()
+	if kv && len(b) > 0 {
+		b, done, err = p.initMapKey(b)
+	}
+	return b, done, err
+}
 
-		p.length.pop()
-		done := p.popState()
-		return b, done, nil
+func (p *Parser) mapHandleLen() (kv, done bool, err error) {
+	if p.length.current > 0 {
+		return true, false, nil
 	}
 
-	return p.initMapKey(b)
+	err = p.visitor.OnObjectFinished()
+	if err == nil {
+		p.length.pop()
+		done, err = p.popState()
+	}
+	return false, done, err
 }
 
 func (p *Parser) initMapKey(b []byte) ([]byte, bool, error) {
@@ -412,6 +514,7 @@ func (p *Parser) initMapKey(b []byte) ([]byte, bool, error) {
 	if minor == lenIndef {
 		return nil, false, errIndefByteSeq
 	}
+
 	return p.initByteSeq(stKey, minor, b[1:])
 }
 
@@ -431,12 +534,12 @@ func (p *Parser) stepKey(b []byte) ([]byte, bool, error) {
 
 func (p *Parser) initByteSeq(major, minor uint8, b []byte) ([]byte, bool, error) {
 	if v := minor; v < len8b {
-		p.state.push(state{major, stStart})
+		p.state.push(state{major | stStartX, stStart})
 		p.length.push(int64(v))
 		return b, false, nil
 	}
 
-	p.state.push(state{major, stStart})
+	p.state.push(state{major | stStartX, stStart})
 	p.state.push(state{stLen, minor})
 	return b, false, nil
 }
@@ -516,23 +619,29 @@ func (p *Parser) stepNeg(in []byte) (b []byte, done bool, err error) {
 	}
 
 	if done && err == nil {
-		done = p.popState()
+		done, err = p.popState()
 	}
 	return
 }
 
 func (p *Parser) stepSingleFloat(in []byte) (b []byte, done bool, err error) {
 	var tmp uint32
-	if b, done, tmp = p.getUint32(b); done {
+	if b, done, tmp = p.getUint32(in); done {
 		err = p.visitor.OnFloat32(math.Float32frombits(tmp))
+		if err == nil {
+			done, err = p.popState()
+		}
 	}
 	return
 }
 
 func (p *Parser) stepDoubleFloat(in []byte) (b []byte, done bool, err error) {
 	var tmp uint64
-	if b, done, tmp = p.getUint64(b); done {
+	if b, done, tmp = p.getUint64(in); done {
 		err = p.visitor.OnFloat64(math.Float64frombits(tmp))
+		if err == nil {
+			done, err = p.popState()
+		}
 	}
 	return
 }
@@ -552,8 +661,9 @@ func (p *Parser) getUint16(b []byte) ([]byte, bool, uint16) {
 func (p *Parser) getUint32(b []byte) ([]byte, bool, uint32) {
 	b, tmp := p.collect(b, 4)
 	if tmp == nil {
-		return nil, false, 0
+		return b, false, 0
 	}
+
 	return b, true, binary.BigEndian.Uint32(tmp)
 }
 
