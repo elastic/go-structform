@@ -137,13 +137,15 @@ func (r *Recording) expand() Recording {
 func (r Recording) Assert(t *testing.T, expected Recording) {
 	exp, err := expected.ToJSON()
 	if err != nil {
-		t.Error(err)
+		t.Error("Assert (expected): ", err)
+		t.Logf("  recording: %#v", exp)
 		return
 	}
 
 	act, err := r.ToJSON()
 	if err != nil {
-		t.Error(err)
+		t.Error("Assert (actual): ", err)
+		t.Logf("  recording: %#v", r)
 		return
 	}
 
@@ -294,8 +296,17 @@ func TestEncodeParseConsistent(
 		err = dec(&target)
 		if err != nil {
 			t.Errorf("Failed to decode %#v with %v", target, err)
+			t.Logf("  recording: %#v", target)
 		}
 
 		target.Assert(t, sample)
 	}
+}
+
+func concatSamples(recs ...[]Recording) []Recording {
+	var out []Recording
+	for _, r := range recs {
+		out = append(out, r...)
+	}
+	return out
 }
