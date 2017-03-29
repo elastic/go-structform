@@ -85,19 +85,19 @@ func jsoniterBufDecoder(b []byte) func(interface{}) error {
 
 func structformJSONEncoder(w io.Writer) func(interface{}) error {
 	vs := json.NewVisitor(w)
-	folder := gotype.NewIterator(vs)
+	folder, _ := gotype.NewIterator(vs)
 	return folder.Fold
 }
 
 func structformUBJSONEncoder(w io.Writer) func(interface{}) error {
 	vs := ubjson.NewVisitor(w)
-	folder := gotype.NewIterator(vs)
+	folder, _ := gotype.NewIterator(vs)
 	return folder.Fold
 }
 
 func structformCBORLEncoder(w io.Writer) func(interface{}) error {
 	vs := cborl.NewVisitor(w)
-	folder := gotype.NewIterator(vs)
+	folder, _ := gotype.NewIterator(vs)
 	return folder.Fold
 }
 
