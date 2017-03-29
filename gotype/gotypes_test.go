@@ -5,9 +5,12 @@ import (
 	gojson "encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	structform "github.com/urso/go-structform"
 	"github.com/urso/go-structform/json"
+	"github.com/urso/go-structform/sftest"
 )
 
 type mapstr map[string]interface{}
@@ -106,12 +109,68 @@ var foldSamples = []struct {
 	},
 }
 
-type countWriter struct{ N int64 }
+func TestFoldUnfoldToIfcConsistent(t *testing.T) {
+	sftest.TestEncodeParseConsistent(t, sftest.Samples,
+		func() (structform.Visitor, func(structform.Visitor) error) {
+			var v interface{}
+			unfolder, err := NewUnfolder(&v)
+			if err != nil {
+				panic(err)
+			}
+			return unfolder, func(to structform.Visitor) error {
+				return Fold(v, to)
+			}
+		})
+}
 
-func (c *countWriter) Write(b []byte) (int, error) {
-	n := len(b)
-	c.N += int64(n)
-	return n, nil
+func TestUserFold(t *testing.T) {
+	ts := time.Now()
+	tsStr := ts.String()
+	tsInt := ts.Unix()
+
+	foldTsString := func(t *time.Time, vs structform.ExtVisitor) error {
+		return vs.OnString(t.String())
+	}
+
+	foldTsInt := func(t *time.Time, vs structform.ExtVisitor) error {
+		return vs.OnInt64(t.Unix())
+	}
+
+	tests := []struct {
+		v        interface{}
+		folder   interface{}
+		expected sftest.Recording
+	}{
+		{ts, foldTsString, sftest.Recording{sftest.StringRec{tsStr}}},
+		{ts, foldTsInt, sftest.Recording{sftest.Int64Rec{tsInt}}},
+		{&ts, foldTsString, sftest.Recording{sftest.StringRec{tsStr}}},
+		{&ts, foldTsInt, sftest.Recording{sftest.Int64Rec{tsInt}}},
+		{map[string]interface{}{"ts": ts}, foldTsInt, sftest.Obj(1, structform.AnyType,
+			"ts", sftest.Int64Rec{tsInt},
+		)},
+		{map[string]interface{}{"ts": &ts}, foldTsInt, sftest.Obj(1, structform.AnyType,
+			"ts", sftest.Int64Rec{tsInt},
+		)},
+		{map[string]interface{}{"ts": ts}, foldTsString, sftest.Obj(1, structform.AnyType,
+			"ts", sftest.StringRec{tsStr},
+		)},
+		{map[string]interface{}{"ts": &ts}, foldTsString, sftest.Obj(1, structform.AnyType,
+			"ts", sftest.StringRec{tsStr},
+		)},
+	}
+
+	for i, test := range tests {
+		t.Logf("run test(%v): %#v -> %#v", i, test.v, test.expected)
+
+		var rec sftest.Recording
+		err := Fold(test.v, &rec, Folders(test.folder))
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		rec.Assert(t, test.expected)
+	}
 }
 
 func TestIter2JsonConsistent(t *testing.T) {
@@ -120,8 +179,12 @@ func TestIter2JsonConsistent(t *testing.T) {
 		t.Logf("run test (%v): %v (%T)", i, test.json, test.value)
 
 		var buf bytes.Buffer
-		iter := NewIterator(json.NewVisitor(&buf))
-		err := iter.Fold(test.value)
+		iter, err := NewIterator(json.NewVisitor(&buf))
+		if err != nil {
+			panic(err)
+		}
+
+		err = iter.Fold(test.value)
 		if err != nil {
 			t.Error(err)
 			continue
@@ -165,36 +228,3 @@ func normalizeJSON(in string) (string, error) {
 
 	return string(b), nil
 }
-
-/*
-func BenchmarkCompareEncode(b *testing.B) {
-	tests := foldSamples
-
-	buf := &countWriter{}
-	makeRun := func(v interface{}, enc func(interface{}) error) func(*testing.B) {
-		return func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				buf.N = 0
-				if err := enc(v); err != nil {
-					b.Error(err)
-					return
-				}
-				b.SetBytes(buf.N)
-			}
-		}
-	}
-
-	for i, test := range tests {
-
-		name := fmt.Sprintf("%v (%T)", test.json, test.value)
-		b.Logf("run test (%v): %v", i, name)
-
-		b.Run("ubjson "+name, makeRun(test.value, NewIterator(ubjson.NewVisitor(buf)).Fold))
-		b.Run("json "+name, makeRun(test.value, NewIterator(json.NewVisitor(buf)).Fold))
-		b.Run("go-codec-json "+name, makeRun(test.value, codec.NewEncoder(buf, &codec.JsonHandle{}).Encode))
-		b.Run("go-codec-msgpack "+name, makeRun(test.value, codec.NewEncoder(buf, &codec.MsgpackHandle{}).Encode))
-		b.Run("go-codec-cbor "+name, makeRun(test.value, codec.NewEncoder(buf, &codec.CborHandle{}).Encode))
-		b.Run("go-json"+name, makeRun(test.value, gojson.NewEncoder(buf).Encode))
-	}
-}
-*/

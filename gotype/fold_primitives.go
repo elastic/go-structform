@@ -36,3 +36,7 @@ func reFoldFloat32(C *foldContext, v reflect.Value) error {
 }
 func reFoldFloat64(C *foldContext, v reflect.Value) error { return C.OnFloat64(v.Float()) }
 func reFoldString(C *foldContext, v reflect.Value) error  { return C.OnString(v.String()) }
+
+func foldFolderIfc(C *foldContext, v interface{}) error {
+	return v.(Folder).Fold(C.visitor)
+}

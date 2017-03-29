@@ -18,24 +18,51 @@ type Iterator struct {
 	ctx foldContext
 }
 
+type Folder interface {
+	Fold(structform.ExtVisitor) error
+}
+
 type foldContext struct {
 	visitor
-	opts options
+	userReg map[reflect.Type]reFoldFn
+	reg     *typeFoldRegistry
+	opts    options
 }
 
-func Fold(v interface{}, vs structform.Visitor) error {
-	return NewIterator(vs).Fold(v)
+func Fold(v interface{}, vs structform.Visitor, opts ...Option) error {
+	if it, err := NewIterator(vs, opts...); err == nil {
+		return it.Fold(v)
+	}
+	return nil
 }
 
-func NewIterator(vs structform.Visitor) *Iterator {
-	return &Iterator{
+func NewIterator(vs structform.Visitor, opts ...Option) (*Iterator, error) {
+	reg := newTypeFoldRegistry()
+	O, err := applyOpts(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var userReg map[reflect.Type]reFoldFn
+	if O.foldFns != nil {
+		userReg = map[reflect.Type]reFoldFn{}
+		for typ, folder := range O.foldFns {
+			reg.set(typ, folder)
+		}
+	}
+
+	it := &Iterator{
 		ctx: foldContext{
 			visitor: structform.EnsureExtVisitor(vs).(visitor),
+			userReg: userReg,
+			reg:     reg,
 			opts: options{
 				tag: "struct",
 			},
 		},
 	}
+
+	return it, nil
 }
 
 func (i *Iterator) Fold(v interface{}) error {
@@ -43,6 +70,13 @@ func (i *Iterator) Fold(v interface{}) error {
 }
 
 func foldInterfaceValue(C *foldContext, v interface{}) error {
+	if C.userReg != nil {
+		t := reflect.TypeOf(v)
+		if f := C.userReg[t]; f != nil {
+			return f(C, reflect.ValueOf(v))
+		}
+	}
+
 	if f := getFoldGoTypes(v); f != nil {
 		return f(C, v)
 	}
@@ -83,6 +117,9 @@ func getFoldGoTypes(v interface{}) foldFn {
 	switch v.(type) {
 	case nil:
 		return foldNil
+
+	case Folder:
+		return foldFolderIfc
 
 	case bool:
 		return foldBool
@@ -182,7 +219,6 @@ func getFoldGoTypes(v interface{}) foldFn {
 
 	case string:
 		return foldString
-
 	case []string:
 		return foldArrString
 	case map[string]string:

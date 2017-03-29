@@ -3,6 +3,7 @@ package gotype
 import (
 	"reflect"
 
+	"github.com/urso/go-structform"
 	"github.com/urso/go-structform/internal/unsafe"
 )
 
@@ -27,6 +28,10 @@ var (
 	tUint64    = reflect.TypeOf(uint64(0))
 	tFloat32   = reflect.TypeOf(float32(0))
 	tFloat64   = reflect.TypeOf(float64(0))
+
+	tError = reflect.TypeOf((*error)(nil)).Elem()
+
+	tExtVisitor = reflect.TypeOf((*structform.ExtVisitor)(nil)).Elem()
 )
 
 func bytes2Str(b []byte) string {

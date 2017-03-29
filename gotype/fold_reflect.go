@@ -3,7 +3,6 @@ package gotype
 import (
 	"reflect"
 	"strings"
-	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -11,16 +10,16 @@ import (
 )
 
 type typeFoldRegistry struct {
-	mu sync.RWMutex
-	m  map[reflect.Type]reFoldFn
+	// mu sync.RWMutex
+	m map[reflect.Type]reFoldFn
 }
 
-var foldRegistry = newTypeFoldRegistry()
+var _foldRegistry = newTypeFoldRegistry()
 
 func getReflectFold(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	var err error
 
-	f := foldRegistry.find(t)
+	f := c.reg.find(t)
 	if f != nil {
 		return f, nil
 	}
@@ -48,7 +47,7 @@ func getReflectFold(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	if err != nil {
 		return nil, err
 	}
-	foldRegistry.set(t, f)
+	c.reg.set(t, f)
 	return f, nil
 }
 
@@ -144,6 +143,7 @@ func getReflectFoldStruct(c *foldContext, t reflect.Type, inline bool) (reFoldFn
 	return makeStructFold(fields), nil
 }
 
+// TODO: benchmark field accessors based on pointer offsets
 func getStructFieldsFolds(c *foldContext, t reflect.Type) ([]reFoldFn, error) {
 	count := t.NumField()
 	fields := make([]reFoldFn, 0, count)
@@ -403,14 +403,14 @@ func newTypeFoldRegistry() *typeFoldRegistry {
 }
 
 func (r *typeFoldRegistry) find(t reflect.Type) reFoldFn {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	// r.mu.RLock()
+	// defer r.mu.RUnlock()
 	return r.m[t]
 }
 
 func (r *typeFoldRegistry) set(t reflect.Type, f reFoldFn) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	// r.mu.Lock()
+	// defer r.mu.Unlock()
 	r.m[t] = f
 }
 
