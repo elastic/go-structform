@@ -26,6 +26,13 @@ func getReflectFold(c *foldContext, t reflect.Type) (reFoldFn, error) {
 
 	f = getReflectFoldPrimitive(t)
 	if f != nil {
+		c.reg.set(t, f)
+		return f, nil
+	}
+
+	if t.Implements(tFolder) {
+		f := reFoldFolderIfc
+		c.reg.set(t, f)
 		return f, nil
 	}
 

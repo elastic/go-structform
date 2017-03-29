@@ -32,6 +32,7 @@ var (
 	tError = reflect.TypeOf((*error)(nil)).Elem()
 
 	tExtVisitor = reflect.TypeOf((*structform.ExtVisitor)(nil)).Elem()
+	tFolder     = reflect.TypeOf((*Folder)(nil)).Elem()
 )
 
 func bytes2Str(b []byte) string {

@@ -81,6 +81,10 @@ func foldInterfaceValue(C *foldContext, v interface{}) error {
 		return f(C, v)
 	}
 
+	if f, ok := v.(Folder); ok {
+		return f.Fold(C.visitor)
+	}
+
 	if tmp, f := getFoldConvert(v); f != nil {
 		return f(C, tmp)
 	}
@@ -117,9 +121,6 @@ func getFoldGoTypes(v interface{}) foldFn {
 	switch v.(type) {
 	case nil:
 		return foldNil
-
-	case Folder:
-		return foldFolderIfc
 
 	case bool:
 		return foldBool
