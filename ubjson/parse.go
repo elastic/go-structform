@@ -315,16 +315,27 @@ func (p *Parser) stepString(b []byte) ([]byte, bool, error) {
 	switch st.stateStep {
 	case stStart:
 		b, err = p.stepLen(b, st.withStep(stWithLen))
+		if !(err == nil && st.stateStep == stWithLen) {
+			break
+		}
+		fallthrough
 	case stWithLen:
 		L := p.length.current
-		var tmp []byte
-		if b, tmp = p.collect(b, int(L)); tmp != nil {
+		if L == 0 {
 			done = true
-			p.popLenState()
-			err = p.strVisitor.OnStringRef(tmp)
+			err = p.visitor.OnString("")
+		} else {
+			var tmp []byte
+			if b, tmp = p.collect(b, int(L)); tmp != nil {
+				done = true
+				err = p.strVisitor.OnStringRef(tmp)
+			}
 		}
 	}
 
+	if done {
+		p.popLenState()
+	}
 	return b, done, err
 }
 

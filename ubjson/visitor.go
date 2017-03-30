@@ -109,14 +109,14 @@ func (vs *Visitor) writeLen(l int) error {
 
 func (vs *Visitor) OnStringRef(s []byte) error {
 	if len(s) == 0 {
-		return vs.OnNil()
+		return vs.string(nil, true)
 	}
 	return vs.string(s, true)
 }
 
 func (vs *Visitor) OnString(s string) error {
 	if len(s) == 0 {
-		return vs.OnNil()
+		return vs.string(nil, true)
 	}
 	return vs.string(str2Bytes(s), true)
 }
@@ -127,8 +127,13 @@ func (vs *Visitor) string(s []byte, marker bool) error {
 			return err
 		}
 	}
-	if err := vs.writeLen(len(s)); err != nil {
+
+	L := len(s)
+	if err := vs.writeLen(L); err != nil {
 		return err
+	}
+	if L == 0 {
+		return nil
 	}
 	return vs.w.write(s)
 }
@@ -216,13 +221,13 @@ func (vs *Visitor) OnInt(i int) error {
 
 func (vs *Visitor) onInt(i int, marker bool) error {
 	switch {
-	case i <= math.MaxInt8:
+	case math.MinInt8 <= i && i <= math.MaxInt8:
 		return vs.int8(int8(i), marker)
-	case i <= math.MaxUint8:
+	case 0 <= i && i <= math.MaxUint8:
 		return vs.uint8(uint8(i), marker)
-	case i <= math.MaxInt16:
+	case math.MinInt16 <= i && i <= math.MaxInt16:
 		return vs.int16(int16(i), marker)
-	case i <= math.MaxInt32:
+	case math.MinInt32 <= i && i <= math.MaxInt32:
 		return vs.int32(int32(i), marker)
 	default:
 		return vs.int64(int64(i), marker)
@@ -272,7 +277,7 @@ func (vs *Visitor) uint64(u uint64, t byte, marker bool) error {
 	case int32Marker:
 		return vs.int32(int32(u), marker)
 	case int64Marker:
-		return vs.int32(int32(u), marker)
+		return vs.int64(int64(u), marker)
 	default:
 		return vs.uint64HighPrec(u, marker)
 	}
