@@ -9,32 +9,40 @@ import (
 )
 
 func TestEncParseConsistent(t *testing.T) {
-	sftest.TestEncodeParseConsistent(t, sftest.Samples,
-		func() (structform.Visitor, func(structform.Visitor) error) {
-			buf := bytes.NewBuffer(nil)
-			vs := NewVisitor(buf)
+	testEncParseConsistent(t, Parse)
+}
 
-			return vs, func(to structform.Visitor) error {
-				return Parse(buf.Bytes(), to)
-			}
-		})
+func TestEncDecoderConsistent(t *testing.T) {
+	testEncParseConsistent(t, func(content []byte, to structform.Visitor) error {
+		dec := NewBytesDecoder(content, to)
+		return dec.Next()
+	})
 }
 
 func TestEncParseBytesConsistent(t *testing.T) {
+	testEncParseConsistent(t, func(content []byte, to structform.Visitor) error {
+		p := NewParser(to)
+		for _, b := range content {
+			err := p.feed([]byte{b})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func testEncParseConsistent(
+	t *testing.T,
+	parse func([]byte, structform.Visitor) error,
+) {
 	sftest.TestEncodeParseConsistent(t, sftest.Samples,
 		func() (structform.Visitor, func(structform.Visitor) error) {
 			buf := bytes.NewBuffer(nil)
 			vs := NewVisitor(buf)
 
 			return vs, func(to structform.Visitor) error {
-				p := NewParser(to)
-				for _, b := range buf.Bytes() {
-					err := p.feed([]byte{b})
-					if err != nil {
-						return err
-					}
-				}
-				return nil
+				return parse(buf.Bytes(), to)
 			}
 		})
 }

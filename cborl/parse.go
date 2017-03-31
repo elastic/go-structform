@@ -287,6 +287,9 @@ func (p *Parser) onValue() (bool, error) {
 		p.length.current--
 		_, done, err := p.mapHandleLen()
 		return done, err
+
+	case majorArr | stIndef, majorMap | stIndef:
+		return false, nil
 	}
 	return true, nil
 }
