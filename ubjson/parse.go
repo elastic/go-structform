@@ -108,7 +108,13 @@ func ParseString(str string, vs structform.Visitor) error {
 }
 
 func NewParser(vs structform.Visitor) *Parser {
-	p := &Parser{
+	p := &Parser{}
+	p.init(vs)
+	return p
+}
+
+func (p *Parser) init(vs structform.Visitor) {
+	*p = Parser{
 		visitor:    vs,
 		strVisitor: structform.MakeStringRefVisitor(vs),
 	}
@@ -117,7 +123,6 @@ func NewParser(vs structform.Visitor) *Parser {
 	p.state.current = state{stNext, stStart}
 	p.state.stack = p.state.stack0[:0]
 	p.valueState.stack = p.valueState.stack0[:0]
-	return p
 }
 
 func (p *Parser) Parse(b []byte) error {
@@ -149,6 +154,7 @@ func (p *Parser) finalize() error {
 			if p.length.current != 0 || p.state.current.stateStep != stCont {
 				return errMissingArrEnd
 			}
+
 			err = p.visitor.OnArrayFinished()
 		case stObjectCount, stObjectTyped:
 			step := p.state.current.stateStep
@@ -162,7 +168,7 @@ func (p *Parser) finalize() error {
 		if err != nil {
 			return err
 		}
-		p.popState()
+		_, err = p.popState()
 	}
 
 	st := &p.state.current
@@ -188,13 +194,35 @@ func (p *Parser) Write(b []byte) (int, error) {
 func (p *Parser) feed(b []byte) error {
 	for len(b) > 0 {
 		var err error
-		b, _, err = p.execStep(b)
+		n, _, err := p.feedUntil(b)
 		if err != nil {
 			return err
 		}
+
+		b = b[n:]
 	}
 
 	return nil
+}
+
+func (p *Parser) feedUntil(b []byte) (int, bool, error) {
+	var (
+		orig = b
+		done bool
+		err  error
+	)
+
+	for {
+		b, done, err = p.execStep(b)
+		if done || err != nil {
+			break
+		}
+
+		if len(b) == 0 {
+			break
+		}
+	}
+	return len(orig) - len(b), done, err
 }
 
 func (p *Parser) execStep(b []byte) ([]byte, bool, error) {
@@ -299,7 +327,7 @@ func (p *Parser) stepFixedValue(b []byte) ([]byte, bool, error) {
 	}
 
 	if done && err == nil {
-		p.popState()
+		done, err = p.popState()
 	}
 
 	return b, done, err
@@ -334,7 +362,7 @@ func (p *Parser) stepString(b []byte) ([]byte, bool, error) {
 	}
 
 	if done {
-		p.popLenState()
+		done, err = p.popLenState()
 	}
 	return b, done, err
 }
@@ -361,10 +389,11 @@ func (p *Parser) stepArrayInit(b []byte) ([]byte, error) {
 func (p *Parser) stepArrayDyn(b []byte) ([]byte, bool, error) {
 	if b[0] == arrEndMarker {
 		err := p.visitor.OnArrayFinished()
+		done := true
 		if err == nil {
-			p.popState()
+			done, err = p.popState()
 		}
-		return b[1:], true, err
+		return b[1:], done, err
 	}
 
 	if st := &p.state.current; st.stateStep == stStart {
@@ -400,11 +429,11 @@ func (p *Parser) stepArrayCount(b []byte) ([]byte, bool, error) {
 
 	if l == 0 {
 		err := p.visitor.OnArrayFinished()
+		done := true
 		if err == nil {
-			p.length.pop()
-			p.popState()
+			done, err = p.popLenState()
 		}
-		return b, true, err
+		return b, done, err
 	}
 
 	p.length.current--
@@ -433,11 +462,11 @@ func (p *Parser) stepArrayTyped(b []byte) ([]byte, bool, error) {
 
 	if l == 0 {
 		err := p.visitor.OnArrayFinished()
+		done := true
 		if err == nil {
-			p.length.pop()
-			p.popState()
+			done, err = p.popLenState()
 		}
-		return b, true, err
+		return b, done, err
 	}
 
 	p.length.current--
@@ -445,18 +474,6 @@ func (p *Parser) stepArrayTyped(b []byte) ([]byte, bool, error) {
 	p.pushState(vs)
 	b, _, err := p.execStep(b)
 	return b, false, err
-}
-
-func (p *Parser) stepArrayCountedContent(b []byte) (bool, []byte, error) {
-	end := p.length.current == 0
-
-	if end {
-		p.length.pop()
-		return end, b, p.visitor.OnArrayFinished()
-	}
-
-	p.length.current--
-	return end, b, nil
 }
 
 func (p *Parser) stepTypeLenHeader(b []byte, cont stateStep) ([]byte, error) {
@@ -510,10 +527,11 @@ func (p *Parser) stepObjectDyn(b []byte) ([]byte, bool, error) {
 	if step == stStart {
 		if b[0] == objEndMarker {
 			err := p.visitor.OnObjectFinished()
+			done := true
 			if err == nil {
-				p.popState()
+				done, err = p.popState()
 			}
-			return b[1:], true, err
+			return b[1:], done, err
 		}
 	}
 
@@ -549,7 +567,7 @@ func (p *Parser) stepObjectCount(b []byte) ([]byte, bool, error) {
 
 	done, b, err := p.stepObjectCountedContent(b, false)
 	if done {
-		p.popLenState()
+		done, err = p.popLenState()
 	}
 	return b, done, err
 }
@@ -566,8 +584,8 @@ func (p *Parser) stepObjectTyped(b []byte) ([]byte, bool, error) {
 
 	done, b, err := p.stepObjectCountedContent(b, true)
 	if done {
-		p.popLenState()
 		p.valueState.pop()
+		done, err = p.popLenState()
 	}
 	return b, done, err
 }
@@ -764,13 +782,14 @@ func (p *Parser) pushLen(l int64) { p.length.push(l) }
 func (p *Parser) popLen()         { p.length.pop() }
 
 func (p *Parser) pushState(next state) { p.state.push(next) }
-func (p *Parser) popState() {
+func (p *Parser) popState() (bool, error) {
 	p.state.pop()
+	return len(p.state.stack) == 0, nil
 }
 
-func (p *Parser) popLenState() {
-	p.popState()
+func (p *Parser) popLenState() (bool, error) {
 	p.popLen()
+	return p.popState()
 }
 
 func readInt16(b []byte) int16 {
