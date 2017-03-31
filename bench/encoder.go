@@ -71,25 +71,33 @@ func structformCBORLEncoder(w io.Writer) func(interface{}) error {
 	return folder.Fold
 }
 
-func structformJSONDecoder(keyCache int) func(io.Reader) func(interface{}) error {
-	return func(r io.Reader) func(interface{}) error {
-		u, _ := gotype.NewUnfolder(nil)
-		dec := json.NewDecoder(r, 2*4096, u)
-		return makeStructformJSONDecoder(u, dec, keyCache)
-	}
-}
-
 func structformJSONBufDecoder(keyCache int) func([]byte) func(interface{}) error {
 	return func(b []byte) func(interface{}) error {
 		u, _ := gotype.NewUnfolder(nil)
 		dec := json.NewBytesDecoder(b, u)
-		return makeStructformJSONDecoder(u, dec, keyCache)
+		return makeStructformDecoder(u, dec.Next, keyCache)
 	}
 }
 
-func makeStructformJSONDecoder(
+func structformUBJSONBufDecoder(keyCache int) func([]byte) func(interface{}) error {
+	return func(b []byte) func(interface{}) error {
+		u, _ := gotype.NewUnfolder(nil)
+		dec := ubjson.NewBytesDecoder(b, u)
+		return makeStructformDecoder(u, dec.Next, keyCache)
+	}
+}
+
+func structformCBORLBufDecoder(keyCache int) func([]byte) func(interface{}) error {
+	return func(b []byte) func(interface{}) error {
+		u, _ := gotype.NewUnfolder(nil)
+		dec := cborl.NewBytesDecoder(b, u)
+		return makeStructformDecoder(u, dec.Next, keyCache)
+	}
+}
+
+func makeStructformDecoder(
 	u *gotype.Unfolder,
-	d *json.Decoder,
+	next func() error,
 	keyCache int,
 ) func(interface{}) error {
 	if keyCache > 0 {
@@ -99,7 +107,7 @@ func makeStructformJSONDecoder(
 		if err := u.SetTarget(v); err != nil {
 			return err
 		}
-		return d.Next()
+		return next()
 	}
 }
 

@@ -12,12 +12,27 @@ import (
 func BenchmarkDecodeBeatsEvents(b *testing.B) {
 	runPaths := func(paths ...string) func(*testing.B) {
 		return func(b *testing.B) {
+			jsonContent := readFile(paths...)
+
 			b.Run("std-json",
-				makeBenchmarkDecodeBeatsEvents(stdJSONBufDecoder, paths...))
-			b.Run("structform",
-				makeBenchmarkDecodeBeatsEvents(structformJSONBufDecoder(0), paths...))
-			b.Run("structform-keycache",
-				makeBenchmarkDecodeBeatsEvents(structformJSONBufDecoder(1000), paths...))
+				makeBenchmarkDecodeBeatsEvents(stdJSONBufDecoder, jsonContent))
+
+			b.Run("structform-json",
+				makeBenchmarkDecodeBeatsEvents(structformJSONBufDecoder(0), jsonContent))
+			b.Run("structform-json-keycache",
+				makeBenchmarkDecodeBeatsEvents(structformJSONBufDecoder(1000), jsonContent))
+
+			ubjsonContent := readFileEncoded(structformUBJSONEncoder, paths...)
+			b.Run("structform-ubjson",
+				makeBenchmarkDecodeBeatsEvents(structformUBJSONBufDecoder(0), ubjsonContent))
+			b.Run("structform-ubjson-keycache",
+				makeBenchmarkDecodeBeatsEvents(structformUBJSONBufDecoder(1000), ubjsonContent))
+
+			cborContent := readFileEncoded(structformCBORLEncoder, paths...)
+			b.Run("structform-cborl",
+				makeBenchmarkDecodeBeatsEvents(structformCBORLBufDecoder(0), cborContent))
+			b.Run("structform-cborl-keycache",
+				makeBenchmarkDecodeBeatsEvents(structformCBORLBufDecoder(1000), cborContent))
 
 			// fails with panic
 			// b.Run("jsoniter",
@@ -69,20 +84,17 @@ func BenchmarkTranscodeBeatsEvents(b *testing.B) {
 
 func makeBenchmarkDecodeBeatsEvents(
 	factory decoderFactory,
-	paths ...string,
+	content []byte,
 ) func(*testing.B) {
-	content, err := readFile(paths...)
-	if err != nil {
-		panic(err)
-	}
 
 	return func(b *testing.B) {
 		b.SetBytes(int64(len(content)))
-
 		for i := 0; i < b.N; i++ {
 			decode := factory(content)
+
 			for {
 				var to map[string]interface{}
+
 				if err := decode(&to); err != nil {
 					if err != io.EOF {
 						b.Error(err)
@@ -121,10 +133,7 @@ func makeBenchmarkTranscodeEvents(
 	fTransc transcodeFactory,
 	paths ...string,
 ) func(b *testing.B) {
-	content, err := readFileEncoded(fEnc, paths...)
-	if err != nil {
-		panic(err)
-	}
+	content := readFileEncoded(fEnc, paths...)
 
 	var buf bytes.Buffer
 	transcode := fTransc(&buf)
@@ -145,10 +154,7 @@ func makeBenchmarkTranscodeEvents(
 }
 
 func loadEvents(paths ...string) []map[string]interface{} {
-	content, err := readFile(paths...)
-	if err != nil {
-		panic(err)
-	}
+	content := readFile(paths...)
 
 	var events []map[string]interface{}
 	dec := stdjson.NewDecoder(bytes.NewReader(content))
@@ -168,7 +174,7 @@ func loadEvents(paths ...string) []map[string]interface{} {
 	return events
 }
 
-func readFileEncoded(encFactory encoderFactory, paths ...string) ([]byte, error) {
+func readFileEncoded(encFactory encoderFactory, paths ...string) []byte {
 	var buf bytes.Buffer
 	enc := encFactory(&buf)
 
@@ -176,24 +182,26 @@ func readFileEncoded(encFactory encoderFactory, paths ...string) ([]byte, error)
 	for _, event := range events {
 		err := enc(event)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 	}
 
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
-func readFile(paths ...string) ([]byte, error) {
+func readFile(paths ...string) []byte {
 	var buf bytes.Buffer
 
 	for _, p := range paths {
 		content, err := ioutil.ReadFile(p)
 		if err != nil {
-			return nil, err
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		buf.Write(content)
 	}
 
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
