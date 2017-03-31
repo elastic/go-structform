@@ -51,7 +51,7 @@ func (dec *Decoder) Next() error {
 
 			n, err := dec.in.Read(dec.buffer0)
 			dec.buffer = dec.buffer0[:n]
-			if err != nil {
+			if n == 0 && err != nil {
 				return err
 			}
 		}
