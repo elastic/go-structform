@@ -75,33 +75,6 @@ func getReflectFoldMap(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	}, nil
 }
 
-func getReflectFoldMapKeys(c *foldContext, t reflect.Type) (reFoldFn, error) {
-	if t.Key().Kind() != reflect.String {
-		return nil, errMapRequiresStringKey
-	}
-
-	elemVisitor, err := getReflectFold(c, t.Elem())
-	if err != nil {
-		return nil, err
-	}
-
-	return makeMapKeysFold(elemVisitor), nil
-}
-
-func makeMapKeysFold(elemVisitor reFoldFn) reFoldFn {
-	return func(C *foldContext, rv reflect.Value) error {
-		for _, k := range rv.MapKeys() {
-			if err := C.OnKey(k.String()); err != nil {
-				return err
-			}
-			if err := elemVisitor(C, rv.MapIndex(k)); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-}
-
 func getFoldPointer(c *foldContext, t reflect.Type) (reFoldFn, error) {
 	N, bt := baseType(t)
 	elemVisitor, err := getReflectFold(c, bt)
@@ -238,6 +211,8 @@ func fieldFold(c *foldContext, t reflect.Type, idx int) (reFoldFn, error) {
 		baseVisitor, err = getReflectFoldStruct(c, bt, true)
 	case reflect.Map:
 		baseVisitor, err = getReflectFoldMapKeys(c, bt)
+	case reflect.Interface:
+		baseVisitor, err = getReflectFoldInlineInterface(c, bt)
 	default:
 		err = errSquashNeedObject
 	}
