@@ -29,6 +29,10 @@ func getReflectFoldMapKeys(c *foldContext, t reflect.Type) (reFoldFn, error) {
 
 func makeMapKeysFold(elemVisitor reFoldFn) reFoldFn {
 	return func(C *foldContext, rv reflect.Value) error {
+		if rv.IsNil() || !rv.IsValid() {
+			return nil
+		}
+
 		for _, k := range rv.MapKeys() {
 			if err := C.OnKey(k.String()); err != nil {
 				return err
@@ -58,6 +62,11 @@ func getReflectFoldInlineInterface(C *foldContext, t reflect.Type) (reFoldFn, er
 	return func(C *foldContext, rv reflect.Value) error {
 		vs.active = C.visitor
 
+		// don't inline missing object
+		if rv.IsNil() || !rv.IsValid() {
+			return nil
+		}
+
 		if rv.Type() != lastType {
 			elemVisitor, err := getReflectFold(&ctx, rv.Type())
 			if err != nil {
@@ -82,8 +91,8 @@ func getReflectFoldInlineInterface(C *foldContext, t reflect.Type) (reFoldFn, er
 }
 
 func (v *expectObjVisitor) OnObjectStart(len int, baseType structform.BaseType) error {
-	if v.depth == 0 {
-		v.depth++
+	v.depth++
+	if v.depth == 1 {
 		return nil
 	}
 	return v.active.OnObjectStart(len, baseType)
