@@ -17,6 +17,10 @@ func BenchmarkDecodeBeatsEvents(b *testing.B) {
 			b.Run("std-json",
 				makeBenchmarkDecodeBeatsEvents(stdJSONBufDecoder, jsonContent))
 
+			// fails to parse events
+			//b.Run("jsoniter",
+			//	makeBenchmarkDecodeBeatsEvents(jsoniterBufDecoder, jsonContent))
+
 			b.Run("structform-json",
 				makeBenchmarkDecodeBeatsEvents(structformJSONBufDecoder(0), jsonContent))
 			b.Run("structform-json-keycache",
@@ -34,9 +38,6 @@ func BenchmarkDecodeBeatsEvents(b *testing.B) {
 			b.Run("structform-cborl-keycache",
 				makeBenchmarkDecodeBeatsEvents(structformCBORLBufDecoder(1000), cborContent))
 
-			// fails with panic
-			// b.Run("jsoniter",
-			// 	makeBenchmarkDecodeBeatsEvents(jsoniterBufDecoder), paths...)
 		}
 	}
 
