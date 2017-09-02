@@ -17,7 +17,7 @@ func BenchmarkDecodeBeatsEvents(b *testing.B) {
 			b.Run("std-json",
 				makeBenchmarkDecodeBeatsEvents(stdJSONBufDecoder, jsonContent))
 
-			// fails to parse events
+			// panic: fails to parse events
 			//b.Run("jsoniter",
 			//	makeBenchmarkDecodeBeatsEvents(jsoniterBufDecoder, jsonContent))
 

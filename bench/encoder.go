@@ -5,7 +5,7 @@ import (
 	stdjson "encoding/json"
 	"io"
 
-	jsoniter "github.com/json-iterator/go"
+	// jsoniter "github.com/json-iterator/go"
 	"github.com/ugorji/go/codec"
 	"github.com/urso/go-structform/cborl"
 	"github.com/urso/go-structform/gotype"
@@ -37,6 +37,7 @@ func gocodecJSONDecoder(r io.Reader) func(interface{}) error {
 	return dec.Decode
 }
 
+/*
 func jsoniterDecoder(r io.Reader) func(interface{}) error {
 	iter := jsoniter.Parse(r, 4096)
 	return func(v interface{}) error {
@@ -52,6 +53,7 @@ func jsoniterBufDecoder(b []byte) func(interface{}) error {
 		return iter.Error
 	}
 }
+*/
 
 func structformJSONEncoder(w io.Writer) func(interface{}) error {
 	vs := json.NewVisitor(w)
