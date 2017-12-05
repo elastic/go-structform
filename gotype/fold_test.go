@@ -143,6 +143,94 @@ var foldSamples = []struct {
 			X struct{ A int } `struct:",inline"`
 		}{X: struct{ A int }{1}},
 	},
+
+	// omit empty without values
+	{
+		`{"a": 1}`,
+		struct {
+			A int
+			B interface{} `struct:",omitempty"`
+		}{A: 1},
+	},
+	{
+		`{"a": 1}`,
+		struct {
+			A int
+			B map[string]interface{} `struct:",omitempty"`
+		}{A: 1},
+	},
+	{
+		`{"a": 1}`,
+		struct {
+			A int
+			B []int `struct:",omitempty"`
+		}{A: 1},
+	},
+	{
+		`{"a": 1}`,
+		struct {
+			A int
+			B string `struct:",omitempty"`
+		}{A: 1},
+	},
+	{
+		`{"a": 1}`,
+		struct {
+			A int
+			B *int `struct:",omitempty"`
+		}{A: 1},
+	},
+	{
+		`{"a": 1}`,
+		struct {
+			A int
+			B *struct{ C int } `struct:",omitempty"`
+		}{A: 1},
+	},
+
+	// omit empty with values
+	{
+		`{"a": 1, "b": 2}`,
+		struct {
+			A int
+			B interface{} `struct:",omitempty"`
+		}{A: 1, B: 2},
+	},
+	{
+		`{"a": 1, "b": {"c": 2}}`,
+		struct {
+			A int
+			B map[string]interface{} `struct:",omitempty"`
+		}{A: 1, B: map[string]interface{}{"c": 2}},
+	},
+	{
+		`{"a": 1, "b":[2]}`,
+		struct {
+			A int
+			B []int `struct:",omitempty"`
+		}{A: 1, B: []int{2}},
+	},
+	{
+		`{"a": 1, "b": "test"}`,
+		struct {
+			A int
+			B string `struct:",omitempty"`
+		}{A: 1, B: "test"},
+	},
+	{
+		`{"a": 1, "b": 0}`,
+		struct {
+			A int
+			B *int `struct:",omitempty"`
+		}{A: 1, B: new(int)},
+	},
+	{
+		`{"a": 1, "b": {"c": 2}}`,
+		struct {
+			A int
+			B *struct{ C int } `struct:",omitempty"`
+		}{A: 1, B: &struct{ C int }{2}},
+	},
 }
 
 func TestIter2JsonConsistent(t *testing.T) {
