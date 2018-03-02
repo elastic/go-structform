@@ -3,6 +3,7 @@ package json
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"strconv"
@@ -712,17 +713,17 @@ func parseUint(b []byte) (uint64, error) {
 	for _, c := range b {
 		d := int(c) - '0'
 		if d < 0 || d > 9 {
-			panic("syntax error")
+			return 0, fmt.Errorf("'%s' is no valid number", b)
 		}
 
 		if n >= cutoff {
-			panic("range error")
+			return 0, fmt.Errorf("number overflow parsing '%v'", b)
 		}
 
 		n *= 10
 		n1 := n + uint64(d)
 		if n1 < n || n1 > maxVal {
-			panic("range error")
+			return 0, fmt.Errorf("number overflow parsing '%v'", b)
 		}
 
 		n = n1
