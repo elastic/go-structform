@@ -13,7 +13,6 @@ var unfoldSamples = []struct {
 	input interface{}
 	value interface{}
 }{
-
 	// primitives
 	{`null`, nil, new(interface{})},
 	{`""`, nil, new(string)},
@@ -63,7 +62,7 @@ var unfoldSamples = []struct {
 	{`[]`, []uint8{}, new(interface{})},
 	{`[]`, []uint8{}, new([]uint8)},
 	{`[]`, []interface{}{}, new([]interface{})},
-	// {`[]`, []interface{}{}, &[]struct{ A string }{}},
+	{`[]`, []interface{}{}, &[]struct{ A string }{}},
 	{`[1,2,3]`, []uint8{1, 2, 3}, new(interface{})},
 	{`[1,2,3]`, []uint8{1, 2, 3}, &[]uint8{0, 0, 0}},
 	{`[1,2,3]`, []uint8{1, 2, 3}, &[]uint8{0, 0, 0, 4}},
@@ -72,6 +71,7 @@ var unfoldSamples = []struct {
 	{`[1,2,3]`, []interface{}{1, 2, 3}, new([]uint8)},
 	{`[1,2,3]`, []int{1, 2, 3}, &[]interface{}{}},
 	{`[1,2,3]`, []int{1, 2, 3}, &[]interface{}{nil, nil, nil, 4}},
+
 	{`[1]`, []uint8{1}, &[]uint8{0, 2, 3}},
 	{`[1,2]`, []uint8{1, 2}, &[]uint8{0, 0, 3}},
 	{`[1,2]`, []interface{}{1, 2}, &[]uint{0, 0, 3}},
@@ -80,12 +80,19 @@ var unfoldSamples = []struct {
 	{`["a","b"]`, []string{"a", "b"}, &[]interface{}{nil, nil}},
 	{`["a","b"]`, []string{"a", "b"}, &[]string{}},
 	{`["a","b"]`, []string{"a", "b"}, new([]string)},
+	{`[null,true,false]`,
+		[]interface{}{nil, true, false},
+		new(interface{})},
+	{`[null,true]`,
+		[]interface{}{nil, true},
+		new(interface{})},
 	{`[null,true,false,123,3.14,"test"]`,
 		[]interface{}{nil, true, false, 123, 3.14, "test"},
 		new(interface{})},
 	{`[null,true,false,123,3.14,"test"]`,
 		[]interface{}{nil, true, false, 123, 3.14, "test"},
 		&[]interface{}{}},
+
 	{`[1,2,3]`, []int{1, 2, 3}, &[]*int{}},
 	{`[1,null,3]`, []interface{}{1, nil, 3}, &[]*int{}},
 
@@ -240,33 +247,34 @@ var unfoldSamples = []struct {
 func TestFoldUnfoldConsistent(t *testing.T) {
 	tests := unfoldSamples
 	for i, test := range tests {
-		t.Logf("run test (%v): %v (%T -> %T)", i, test.json, test.input, test.value)
+		test := test
+		title := fmt.Sprintf("run test %v: %v (%T -> %T)", i, test.json, test.input, test.value)
+		t.Run(title, func(t *testing.T) {
+			t.Log(title)
 
-		u, err := NewUnfolder(test.value)
-		if err != nil {
-			t.Errorf("NewUnfolder failed with: %v", err)
-			continue
-		}
+			u, err := NewUnfolder(test.value)
+			if err != nil {
+				t.Fatalf("NewUnfolder failed with: %v", err)
+			}
 
-		if err := Fold(test.input, u); err != nil {
-			t.Errorf("Fold-Unfold failed with: %v", err)
-			continue
-		}
+			gcCheck := newGCCheckVisitor(u)
+			if err := Fold(test.input, gcCheck); err != nil {
+				t.Fatalf("Fold-Unfold failed with: %v", err)
+			}
 
-		if st := &u.unfolder; len(st.stack) > 0 {
-			t.Errorf("Unfolder state stack not empty: %v, %v", st.stack, st.current)
-			continue
-		}
+			if st := &u.unfolder; len(st.stack) > 0 {
+				t.Fatalf("Unfolder state stack not empty: %v, %v", st.stack, st.current)
+			}
 
-		// serialize to json
-		var buf bytes.Buffer
-		if err := Fold(test.value, json.NewVisitor(&buf)); err != nil {
-			t.Errorf("serialize to json failed with: %v", err)
-			continue
-		}
+			// serialize to json
+			var buf bytes.Buffer
+			if err := Fold(test.value, json.NewVisitor(&buf)); err != nil {
+				t.Fatalf("serialize to json failed with: %v", err)
+			}
 
-		// compare conversions did preserve type
-		assertJSON(t, test.json, buf.String())
+			// compare conversions did preserve type
+			assertJSON(t, test.json, buf.String())
+		})
 	}
 }
 
