@@ -7,12 +7,31 @@ import (
 	"testing"
 
 	stdjson "encoding/json"
+
+	"github.com/urso/go-structform/json"
+	"github.com/urso/go-structform/visitors"
 )
 
 func BenchmarkDecodeBeatsEvents(b *testing.B) {
 	runPaths := func(paths ...string) func(*testing.B) {
 		return func(b *testing.B) {
 			jsonContent := readFile(paths...)
+
+			b.Run("structform-json-parse", func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					b.SetBytes(int64(len(jsonContent)))
+					dec := json.NewBytesDecoder(jsonContent, visitors.NilVisitor())
+					for {
+						err := dec.Next()
+						if err != nil {
+							if err != io.EOF {
+								b.Error(err)
+							}
+							break
+						}
+					}
+				}
+			})
 
 			b.Run("std-json",
 				makeBenchmarkDecodeBeatsEvents(stdJSONBufDecoder, jsonContent))
@@ -37,7 +56,6 @@ func BenchmarkDecodeBeatsEvents(b *testing.B) {
 				makeBenchmarkDecodeBeatsEvents(structformCBORLBufDecoder(0), cborContent))
 			b.Run("structform-cborl-keycache",
 				makeBenchmarkDecodeBeatsEvents(structformCBORLBufDecoder(1000), cborContent))
-
 		}
 	}
 
