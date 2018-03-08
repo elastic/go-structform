@@ -5,14 +5,19 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Add `visitors.NilVisitor`. (Commit ab1cb2d)
 
 ### Changed
+- Replace code generator with mktmlp (github.com/urso/mktmpl). (Commit 0356386)
+- Introduce custom number parser. (Commit 41308dd)
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+- Fix gc failures by removing region allocator for temporary objects in decoder. Decoding into `map[string]X` with `X` being a custom go struct will require an extra alloc by now. (Commit 9b12176)
+- Fix invalid cast on pointer math. (Commit ea18344)
 
 ## [0.0.2]
 
