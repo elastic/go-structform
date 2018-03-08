@@ -32,7 +32,7 @@ func makeUserFoldFn(fn reflect.Value) (userFoldFn, error) {
 	}
 
 	ta1 := t.In(1)
-	if ta1 != tExtVisitor {
+	if ta1.Name() != tExtVisitor.Name() {
 		return nil, fmt.Errorf("second arument in function '%v' must be structform.ExtVisitor", t.Name())
 	}
 
