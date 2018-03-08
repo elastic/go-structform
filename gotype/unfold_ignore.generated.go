@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	structform "github.com/urso/go-structform"
+	structform "github.com/elastic/go-structform"
 )
 
 type unfoldIgnoreValue struct{}

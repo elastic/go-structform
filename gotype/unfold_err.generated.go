@@ -1,7 +1,7 @@
 // This file has been generated from 'unfold_err.yml', do not edit
 package gotype
 
-import structform "github.com/urso/go-structform"
+import structform "github.com/elastic/go-structform"
 
 type unfolderErrArrayStart struct{}
 

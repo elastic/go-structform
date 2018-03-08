@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	structform "github.com/urso/go-structform"
+	structform "github.com/elastic/go-structform"
 )
 
 type Recording []Record

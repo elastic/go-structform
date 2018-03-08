@@ -1,6 +1,6 @@
 package cborl
 
-import "github.com/urso/go-structform/internal/unsafe"
+import "github.com/elastic/go-structform/internal/unsafe"
 
 const (
 	majorUint  uint8 = 0x00

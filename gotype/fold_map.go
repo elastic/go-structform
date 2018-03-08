@@ -3,7 +3,7 @@ package gotype
 import (
 	"reflect"
 
-	structform "github.com/urso/go-structform"
+	structform "github.com/elastic/go-structform"
 )
 
 var (

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	structform "github.com/urso/go-structform"
-	"github.com/urso/go-structform/json"
-	"github.com/urso/go-structform/sftest"
+	structform "github.com/elastic/go-structform"
+	"github.com/elastic/go-structform/json"
+	"github.com/elastic/go-structform/sftest"
 )
 
 var foldSamples = []struct {

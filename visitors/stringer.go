@@ -3,7 +3,7 @@ package visitors
 import (
 	"fmt"
 
-	structform "github.com/urso/go-structform"
+	structform "github.com/elastic/go-structform"
 )
 
 type StringConvVisitor struct {

@@ -5,8 +5,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/urso/go-structform"
-	"github.com/urso/go-structform/sftest"
+	"github.com/elastic/go-structform"
+	"github.com/elastic/go-structform/sftest"
 )
 
 func TestEncParseConsistent(t *testing.T) {

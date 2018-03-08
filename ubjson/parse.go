@@ -6,7 +6,7 @@ import (
 	"io"
 	"math"
 
-	structform "github.com/urso/go-structform"
+	structform "github.com/elastic/go-structform"
 )
 
 type Parser struct {

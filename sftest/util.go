@@ -1,6 +1,6 @@
 package sftest
 
-import structform "github.com/urso/go-structform"
+import structform "github.com/elastic/go-structform"
 
 func Arr(l int, t structform.BaseType, elems ...interface{}) []Record {
 	a := []Record{ArrayStartRec{l, t}}
