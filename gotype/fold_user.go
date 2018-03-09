@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"unsafe"
 
-	structform "github.com/urso/go-structform"
-	stunsafe "github.com/urso/go-structform/internal/unsafe"
+	structform "github.com/elastic/go-structform"
+	stunsafe "github.com/elastic/go-structform/internal/unsafe"
 )
 
 type userFoldFn func(unsafe.Pointer, structform.ExtVisitor) error

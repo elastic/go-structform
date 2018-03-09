@@ -1,6 +1,6 @@
 package ubjson
 
-import "github.com/urso/go-structform/internal/unsafe"
+import "github.com/elastic/go-structform/internal/unsafe"
 
 const (
 	noMarker byte = 0

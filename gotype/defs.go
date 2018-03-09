@@ -3,8 +3,8 @@ package gotype
 import (
 	"reflect"
 
-	"github.com/urso/go-structform"
-	"github.com/urso/go-structform/internal/unsafe"
+	"github.com/elastic/go-structform"
+	"github.com/elastic/go-structform/internal/unsafe"
 )
 
 type options struct {

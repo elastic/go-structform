@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/urso/go-structform/json"
+	"github.com/elastic/go-structform/json"
 )
 
 var unfoldSamples = []struct {

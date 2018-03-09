@@ -7,10 +7,10 @@ import (
 
 	// jsoniter "github.com/json-iterator/go"
 	"github.com/ugorji/go/codec"
-	"github.com/urso/go-structform/cborl"
-	"github.com/urso/go-structform/gotype"
-	"github.com/urso/go-structform/json"
-	"github.com/urso/go-structform/ubjson"
+	"github.com/elastic/go-structform/cborl"
+	"github.com/elastic/go-structform/gotype"
+	"github.com/elastic/go-structform/json"
+	"github.com/elastic/go-structform/ubjson"
 )
 
 type encoderFactory func(io.Writer) func(interface{}) error

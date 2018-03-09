@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	structform "github.com/urso/go-structform"
+	structform "github.com/elastic/go-structform"
 )
 
 // Visitor implements the structform.Visitor interface, json encoding the

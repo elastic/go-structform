@@ -3,7 +3,7 @@ package visitors
 import (
 	"errors"
 
-	structform "github.com/urso/go-structform"
+	structform "github.com/elastic/go-structform"
 )
 
 type ExpectObjVisitor struct {
