@@ -86,6 +86,16 @@ func TestStringEncoding(t *testing.T) {
 			htmlEscape: false,
 			expected:   `"<hello>world</hello>"`,
 		},
+		"html with double quotes": testCase{
+			in:         `<hello id="hola">`,
+			htmlEscape: true,
+			expected:   `"\u003chello id=\"hola\"\u003e"`,
+		},
+		"html with single quotes": testCase{
+			in:         `<hello id='hola'>`,
+			htmlEscape: true,
+			expected:   `"\u003chello id='hola'\u003e"`,
+		},
 	}
 
 	for name, test := range cases {
