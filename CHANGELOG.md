@@ -5,7 +5,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Add SetEscapeHTML to json visitor. (PR #4)
 
 ### Changed
 
@@ -14,6 +13,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 ### Fixed
+
+## [0.0.4]
+
+### Added
+- Add SetEscapeHTML to json visitor. (PR #4)
 
 ## [0.0.3]
 
