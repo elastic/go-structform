@@ -325,6 +325,9 @@ func TestUnfoldJsonInto(t *testing.T) {
 			t.Error(err)
 			continue
 		}
+
+		// clear unfolder state.
+		un.Reset()
 	}
 }
 
@@ -354,7 +357,6 @@ func BenchmarkUnfoldJsonInto(b *testing.B) {
 				if err != nil {
 					b.Error(err)
 				}
-
 			}
 		})
 	}
