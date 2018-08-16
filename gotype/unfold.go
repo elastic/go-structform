@@ -129,6 +129,11 @@ func (u *Unfolder) EnableKeyCache(max int) {
 	u.keyCache.init(max)
 }
 
+// Reset reinitializes the unfolder and removes all references to the target
+// object. Use Reset if the unfolder is re-used and the target changed.
+// References to the target can prevent the garbage collector from collecting
+// the target after processing. Use Reset to set the target to `nil`.
+// SetTarget must be called after Reset and before another Unfold operation.
 func (u *Unfolder) Reset() {
 	u.SetTarget(nil)
 }
