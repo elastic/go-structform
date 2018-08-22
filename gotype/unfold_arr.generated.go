@@ -21,7 +21,7 @@ package gotype
 import (
 	"unsafe"
 
-	"github.com/elastic/go-structform"
+	structform "github.com/elastic/go-structform"
 )
 
 var (

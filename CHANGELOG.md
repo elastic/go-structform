@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Regenerate code with new stringer. (PR #9)
 
 ### Changed
 
