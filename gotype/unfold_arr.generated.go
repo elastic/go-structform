@@ -2310,6 +2310,5 @@ func makeArrayPtr(ctx *unfoldCtx, l int, bt structform.BaseType) (interface{}, u
 
 	default:
 		panic("invalid type code")
-		return nil, nil, nil
 	}
 }
