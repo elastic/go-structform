@@ -387,6 +387,22 @@ func foldSamples() map[string]foldCase {
 				B *struct{ C int } `struct:",omitempty"`
 			}{A: 1, B: &struct{ C int }{2}},
 		},
+
+		// omit
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B int `struct:"-"`
+			}{A: 1, B: 2},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B int `struct:",omit"`
+			}{A: 1, B: 2},
+		},
 	}
 
 	m := map[string]foldCase{}

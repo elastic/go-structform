@@ -77,6 +77,10 @@ func fieldUnfolders(ctx *unfoldCtx, t reflect.Type) (map[string]fieldUnfolder, e
 		}
 
 		tagName, tagOpts := parseTags(st.Tag.Get(ctx.opts.tag))
+		if tagOpts.omit {
+			continue
+		}
+
 		if tagOpts.squash {
 			if st.Type.Kind() != reflect.Struct {
 				return nil, errSquashNeedObject

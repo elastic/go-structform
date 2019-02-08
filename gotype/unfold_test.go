@@ -355,6 +355,22 @@ func unfoldSamples() map[string]unfoldCase {
 			},
 			&struct{ A struct{ B struct{ C int } } }{},
 		},
+		{
+			`{"a": 1}`,
+			map[string]interface{}{"a": 1, "b": 2},
+			&struct {
+				A int
+				B int `struct:"-"`
+			}{},
+		},
+		{
+			`{"a": 1}`,
+			map[string]interface{}{"a": 1, "b": 2},
+			&struct {
+				A int
+				B int `struct:",omit"`
+			}{},
+		},
 	}
 
 	m := map[string]unfoldCase{}
