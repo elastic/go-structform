@@ -23,8 +23,9 @@ import (
 	"fmt"
 	"testing"
 
-	structform "github.com/elastic/go-structform"
 	"github.com/stretchr/testify/assert"
+
+	structform "github.com/elastic/go-structform"
 )
 
 type Recording []Record
@@ -302,6 +303,8 @@ func TestEncodeParseConsistent(
 
 		title := fmt.Sprintf("test %v: %#v => %v", i, sample, expected)
 		t.Run(title, func(t *testing.T) {
+			t.Parallel()
+
 			enc, dec := constr()
 
 			err = sample.Replay(enc)
