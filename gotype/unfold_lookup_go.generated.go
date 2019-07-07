@@ -292,7 +292,13 @@ func lookupGoPtrUnfolder(t reflect.Type) ptrUnfolder {
 }
 
 func lookupReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
-	if f := unfoldRegistry.find(t); f != nil {
+	if ctx.userReg != nil {
+		if f := ctx.userReg[t]; f != nil {
+			return f, nil
+		}
+	}
+
+	if f := ctx.reg.find(t); f != nil {
 		return f, nil
 	}
 
@@ -301,7 +307,7 @@ func lookupReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
 		return nil, err
 	}
 
-	unfoldRegistry.set(t, f)
+	ctx.reg.set(t, f)
 	return f, nil
 }
 

@@ -84,7 +84,13 @@ main: |
   }
 
   func lookupReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
-    if f := unfoldRegistry.find(t); f != nil {
+    if ctx.userReg != nil {
+      if f := ctx.userReg[t]; f != nil {
+        return f, nil
+      }
+    }
+
+    if f := ctx.reg.find(t); f != nil {
       return f, nil
     }
 
@@ -93,7 +99,7 @@ main: |
       return nil, err
     }
 
-    unfoldRegistry.set(t, f)
+    ctx.reg.set(t, f)
     return f, nil
   }
 

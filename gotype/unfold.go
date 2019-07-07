@@ -34,6 +34,9 @@ type unfoldCtx struct {
 
 	// buf buffer
 
+	userReg map[reflect.Type]reflUnfolder
+	reg     *typeUnfoldRegistry
+
 	unfolder unfolderStack
 	value    reflectValueStack
 	baseType structformTypeStack
@@ -98,9 +101,14 @@ type typeUnfoldRegistry struct {
 	m  map[reflect.Type]reflUnfolder
 }
 
-var unfoldRegistry = newTypeUnfoldRegistry()
+var _unfoldRegistry = newTypeUnfoldRegistry()
 
-func NewUnfolder(to interface{}) (*Unfolder, error) {
+func NewUnfolder(to interface{}, opts ...UnfoldOption) (*Unfolder, error) {
+	O, err := applyUnfoldOpts(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	u := &Unfolder{}
 	u.opts = options{tag: "struct"}
 
@@ -111,6 +119,14 @@ func NewUnfolder(to interface{}) (*Unfolder, error) {
 	u.idx.init()
 	u.baseType.init()
 	u.valueBuffer.init()
+
+	u.reg = _unfoldRegistry
+	if O.unfoldFns != nil {
+		u.userReg = map[reflect.Type]reflUnfolder{}
+		for typ, unfolder := range O.unfoldFns {
+			u.userReg[typ] = unfolder
+		}
+	}
 
 	// TODO: make allocation buffer size configurable
 	// u.buf.init(1024)

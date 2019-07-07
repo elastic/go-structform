@@ -20,7 +20,11 @@ package gotype
 import (
 	"bytes"
 	"fmt"
+	"reflect"
+	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/elastic/go-structform/json"
 )
@@ -379,4 +383,51 @@ func unfoldSamples() map[string]unfoldCase {
 		m[title] = test
 	}
 	return m
+}
+
+func TestUserUnfold(t *testing.T) {
+	type myint int
+
+	tests := []struct {
+		input    interface{}
+		want     interface{}
+		unfolder interface{}
+	}{
+		{
+			input: "12345",
+			want:  myint(12345),
+			unfolder: func(to *myint, in string) error {
+				i, err := strconv.Atoi(in)
+				*to = myint(i)
+				return err
+			},
+		},
+	}
+
+	for i, test := range tests {
+		title := fmt.Sprintf("%v - %#v -> %#v", i, test.input, test.want)
+		test := test
+		t.Run(title, func(t *testing.T) {
+			t.Parallel()
+
+			wantType := reflect.TypeOf(test.want)
+			cell := reflect.New(wantType)
+
+			u, err := NewUnfolder(cell.Interface(), Unfolders(test.unfolder))
+			if err != nil {
+				t.Fatalf("NewUnfolder failed with: %v", err)
+			}
+
+			gcCheck := newGCCheckVisitor(u)
+			if err := Fold(test.input, gcCheck); err != nil {
+				t.Fatalf("Fold-Unfold failed with: %v", err)
+			}
+
+			if st := &u.unfolder; len(st.stack) > 0 {
+				t.Fatalf("Unfolder state stack not empty: %v, %v", st.stack, st.current)
+			}
+
+			assert.Equal(t, test.want, cell.Elem().Interface())
+		})
+	}
 }
