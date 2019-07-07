@@ -73,11 +73,3 @@ func makeUserPrimitiveUnfolder(fn reflect.Value) (reflUnfolder, error) {
 	unfolder := constr(fn)
 	return liftGoUnfolder(unfolder), nil
 }
-
-func lookupUserPrimitiveConstructor(t reflect.Type) func(reflect.Value) ptrUnfolder {
-	if t.Kind() != reflect.String {
-		return nil
-	}
-
-	return newUserUnfolderString
-}

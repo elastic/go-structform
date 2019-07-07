@@ -402,6 +402,18 @@ func TestUserUnfold(t *testing.T) {
 				return err
 			},
 		},
+		{
+			input: true,
+			want:  myint(1),
+			unfolder: func(to *myint, in bool) error {
+				if in {
+					*to = 1
+				} else {
+					*to = 0
+				}
+				return nil
+			},
+		},
 	}
 
 	for i, test := range tests {

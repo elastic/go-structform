@@ -21,6 +21,17 @@ import:
 main: |
   package gotype
 
+  func lookupUserPrimitiveConstructor(t reflect.Type) func(reflect.Value) ptrUnfolder {
+    switch t.Kind() {
+    {{- range data.primitiveTypes }}
+    case reflect.{{ capitalize . }}:
+      return {{ capitalize . | printf "newUserUnfolder%v" }}
+    {{ end }}
+    default:
+      return nil
+    }
+  }
+
   func lookupGoTypeUnfolder(to interface{}) (unsafe.Pointer, ptrUnfolder) {
     switch ptr := to.(type) {
       case *interface{}:

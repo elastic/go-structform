@@ -23,6 +23,55 @@ import (
 	"unsafe"
 )
 
+func lookupUserPrimitiveConstructor(t reflect.Type) func(reflect.Value) ptrUnfolder {
+	switch t.Kind() {
+	case reflect.Bool:
+		return newUserUnfolderBool
+
+	case reflect.String:
+		return newUserUnfolderString
+
+	case reflect.Uint:
+		return newUserUnfolderUint
+
+	case reflect.Uint8:
+		return newUserUnfolderUint8
+
+	case reflect.Uint16:
+		return newUserUnfolderUint16
+
+	case reflect.Uint32:
+		return newUserUnfolderUint32
+
+	case reflect.Uint64:
+		return newUserUnfolderUint64
+
+	case reflect.Int:
+		return newUserUnfolderInt
+
+	case reflect.Int8:
+		return newUserUnfolderInt8
+
+	case reflect.Int16:
+		return newUserUnfolderInt16
+
+	case reflect.Int32:
+		return newUserUnfolderInt32
+
+	case reflect.Int64:
+		return newUserUnfolderInt64
+
+	case reflect.Float32:
+		return newUserUnfolderFloat32
+
+	case reflect.Float64:
+		return newUserUnfolderFloat64
+
+	default:
+		return nil
+	}
+}
+
 func lookupGoTypeUnfolder(to interface{}) (unsafe.Pointer, ptrUnfolder) {
 	switch ptr := to.(type) {
 	case *interface{}:
