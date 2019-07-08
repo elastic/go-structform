@@ -36,13 +36,22 @@ func applyUnfoldOpts(opts []UnfoldOption) (i initUnfoldOptions, err error) {
 	return i, err
 }
 
-// Unfolders accepts a list of primitive or structured unfolders.
+// Unfolders accepts a list of primitive or processing unfolders.
 //
 // Primitive must implement a function matching the type: func(to *Target, from P) error
 // Where to is an arbitrary go type that the result should be written to and
 // P must be one of: bool, string, uint(8|16|32|64), int(8|16|32|64), float(32|64)
 //
-// Stuctured unfolders ... // TODO
+// Processing unfolders first unfold a structure into a temporary structure, followed
+// by a post-processing function used to fill in the original target. Processing unfolders
+// for type T have the signature:
+// func(to *T) (cell interface{}, process func(to *T, cell interface{}) error)
+//
+// A processing unfolder returns a temporary value for unfolding. The Unfolder will process
+// the temporary value (held in cell), like any regular supported value.
+// The process function is executed if the parsing step did succeed.
+// The address to the target structure and the original cell are reported to the process function,
+// reducing the need for allocation storage on the heap in most simple cases.
 func Unfolders(in ...interface{}) UnfoldOption {
 	unfolders, err := makeUserUnfolderFns(in)
 	if err != nil || len(unfolders) == 0 {

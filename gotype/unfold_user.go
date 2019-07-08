@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	stunsafe "github.com/elastic/go-structform/internal/unsafe"
 )
 
 func makeUserUnfolder(fn reflect.Value) (target reflect.Type, unfolder reflUnfolder, err error) {
@@ -34,16 +36,12 @@ func makeUserUnfolder(fn reflect.Value) (target reflect.Type, unfolder reflUnfol
 	case t.NumIn() == 2 && t.NumOut() == 1:
 		unfolder, err = makeUserPrimitiveUnfolder(fn)
 	case t.NumIn() == 1 && t.NumOut() == 2:
-		unfolder, err = makeUserStructUnfolder(fn)
+		unfolder, err = makeUserProcessingUnfolder(fn)
 	default:
 		return nil, nil, fmt.Errorf("invalid number of arguments in unfolder: %v", fn)
 	}
 
 	return t.In(0), unfolder, err
-}
-
-func makeUserStructUnfolder(fn reflect.Value) (reflUnfolder, error) {
-	return nil, errors.New("TODO: add support for user defined structured unfolder")
 }
 
 func makeUserPrimitiveUnfolder(fn reflect.Value) (reflUnfolder, error) {
@@ -54,10 +52,10 @@ func makeUserPrimitiveUnfolder(fn reflect.Value) (reflUnfolder, error) {
 	}
 
 	if t.NumIn() != 2 {
-		return nil, fmt.Errorf("function '%v' must accept 2 arguments", t.Name())
+		return nil, fmt.Errorf("function '%v' must accept 2 arguments", fn)
 	}
-	if t.NumOut() != 1 || t.Out(0) != tError {
-		return nil, fmt.Errorf("function '%v' does not return errors", t.Name())
+	if t.NumOut() != 1 || (t.NumOut() > 0 && t.Out(0) != tError) {
+		return nil, fmt.Errorf("function '%v' does not return errors", fn)
 	}
 
 	ta0 := t.In(0)
@@ -72,4 +70,64 @@ func makeUserPrimitiveUnfolder(fn reflect.Value) (reflUnfolder, error) {
 
 	unfolder := constr(fn)
 	return liftGoUnfolder(unfolder), nil
+}
+
+func makeUserProcessingUnfolder(fn reflect.Value) (reflUnfolder, error) {
+	if err := checkProcessingUnfolder(fn); err != nil {
+		return nil, err
+	}
+
+	return liftGoUnfolder(&unfolderUserProcessingInit{
+		fnInit: *((*userProcessingInitFn)(stunsafe.UnsafeFnPtr(fn))),
+	}), nil
+}
+
+func checkProcessingUnfolder(fn reflect.Value) error {
+	if fn.Kind() != reflect.Func {
+		return fmt.Errorf("processing unfolder '%v' is no function", fn)
+	}
+
+	t := fn.Type()
+
+	// check input
+	if t.NumIn() != 1 {
+		return fmt.Errorf("processing unfolder '%v' must accept one target argument", fn)
+	}
+	in := t.In(0)
+	if in.Kind() != reflect.Ptr {
+		return fmt.Errorf("processing unfolder '%v' target argument must be a pointer", fn)
+	}
+
+	// check returns
+	if t.NumOut() != 2 {
+		return fmt.Errorf("processing unfolder '%v' must return 2 values", fn)
+	}
+	if t.Out(0) != tInterface {
+		return fmt.Errorf("processing unfolder '%v' must return interface{} as first value", fn)
+	}
+	proc := t.Out(1)
+	if proc.Kind() != reflect.Func {
+		return fmt.Errorf("processing unfolder '%v' second return must be a function", fn)
+	}
+
+	// check processing function input
+	if proc.NumIn() != 2 {
+		return fmt.Errorf("processing function of '%v' must accept 2 arguments", fn)
+	}
+	if proc.In(0) != in {
+		return fmt.Errorf("processing function of '%v' must accept the target type '%v'", fn, in)
+	}
+	if proc.In(1) != tInterface {
+		return fmt.Errorf("processing function of '%v' must accept interface{} as second argument", fn)
+	}
+
+	// check processing function output
+	if proc.NumOut() != 1 {
+		return fmt.Errorf("processing function of '%v' must return exactly one value", fn)
+	}
+	if proc.Out(0) != tError {
+		return fmt.Errorf("processing function of '%v' must return an error value", fn)
+	}
+
+	return nil
 }

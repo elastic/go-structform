@@ -28,5 +28,6 @@ package gotype
 //go:generate mktmpl -f -o unfold_refl.generated.go unfold_refl.yml
 //go:generate mktmpl -f -o unfold_ignore.generated.go unfold_ignore.yml
 //go:generate mktmpl -f -o unfold_user_primitive.generated.go unfold_user_primitive.yml
+//go:generate mktmpl -f -o unfold_user_processing.generated.go unfold_user_processing.yml
 
 // go:generate mktmpl -f -o unfold_sel_generated.go unfold_sel.yml

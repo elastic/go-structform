@@ -388,12 +388,12 @@ func unfoldSamples() map[string]unfoldCase {
 func TestUserUnfold(t *testing.T) {
 	type myint int
 
-	tests := []struct {
+	tests := map[string]struct {
 		input    interface{}
 		want     interface{}
 		unfolder interface{}
 	}{
-		{
+		"parse from string": {
 			input: "12345",
 			want:  myint(12345),
 			unfolder: func(to *myint, in string) error {
@@ -402,7 +402,7 @@ func TestUserUnfold(t *testing.T) {
 				return err
 			},
 		},
-		{
+		"parse from bool": {
 			input: true,
 			want:  myint(1),
 			unfolder: func(to *myint, in bool) error {
@@ -414,10 +414,80 @@ func TestUserUnfold(t *testing.T) {
 				return nil
 			},
 		},
+		"custom post processing with temporary cell": {
+			input: 23,
+			want:  myint(23),
+			unfolder: func(to *myint) (interface{}, func(*myint, interface{}) error) {
+				return new(int), func(to *myint, tmp interface{}) error {
+					parsed := *(tmp.(*int))
+					*to = myint(parsed)
+					return nil
+				}
+			},
+		},
+		"reuse cell in id post processor": {
+			input: 23,
+			want:  myint(23),
+			unfolder: func(to *myint) (interface{}, func(*myint, interface{}) error) {
+				return to, func(to *myint, tmp interface{}) error {
+					return nil
+				}
+			},
+		},
+		"reuse cell and post process": {
+			input: 23,
+			want:  myint(42),
+			unfolder: func(to *myint) (interface{}, func(*myint, interface{}) error) {
+				return to, func(to *myint, tmp interface{}) error {
+					*to += 19
+					return nil
+				}
+			},
+		},
+		"parse array values from strings": {
+			input: []string{"1", "2", "3"},
+			want:  []myint{1, 2, 3},
+			unfolder: func(to *myint, in string) error {
+				i, err := strconv.Atoi(in)
+				*to = myint(i)
+				return err
+			},
+		},
+		"array with post processing and temporary cell": {
+			input: []int{1, 2, 3},
+			want:  []myint{21, 22, 23},
+			unfolder: func(to *myint) (interface{}, func(*myint, interface{}) error) {
+				return new(int), func(to *myint, tmp interface{}) error {
+					parsed := *(tmp.(*int))
+					*to = myint(parsed + 20)
+					return nil
+				}
+			},
+		},
+		"array post processing with cell reuse": {
+			input: []int{1, 2, 3},
+			want:  []myint{21, 22, 23},
+			unfolder: func(to *myint) (interface{}, func(*myint, interface{}) error) {
+				return to, func(to *myint, _ interface{}) error {
+					*to += 20
+					return nil
+				}
+			},
+		},
+		"value from custom structure": {
+			input: map[string]int{"a": 1, "b": 2},
+			want:  myint(3),
+			unfolder: func(to *myint) (interface{}, func(*myint, interface{}) error) {
+				cell := &struct{ A, B int }{}
+				return cell, func(to *myint, _ interface{}) error {
+					*to = myint(cell.A + cell.B)
+					return nil
+				}
+			},
+		},
 	}
 
-	for i, test := range tests {
-		title := fmt.Sprintf("%v - %#v -> %#v", i, test.input, test.want)
+	for title, test := range tests {
 		test := test
 		t.Run(title, func(t *testing.T) {
 			t.Parallel()

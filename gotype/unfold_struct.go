@@ -129,7 +129,7 @@ func makeFieldUnfolder(ctx *unfoldCtx, st reflect.StructField) (fieldUnfolder, e
 		fu.initState = pu.initState
 	} else {
 		targetType := reflect.PtrTo(st.Type)
-		ru, err := lookupReflUnfolder(ctx, targetType)
+		ru, err := lookupReflUnfolder(ctx, targetType, true)
 		if err != nil {
 			return fu, err
 		}
