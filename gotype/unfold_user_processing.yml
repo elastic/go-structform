@@ -37,7 +37,7 @@ main: |
 
   type userProcessingInitFn func(unsafe.Pointer) (interface{}, userProcessingFn)
 
-  type userProcessingFn func(unsafe.Pointer, interface{})
+  type userProcessingFn func(unsafe.Pointer, interface{}) error
 
   func (u *unfolderUserProcessingInit) initState(ctx *unfoldCtx, ptr unsafe.Pointer) {
     cell, cont := u.fnInit(ptr)
@@ -93,19 +93,22 @@ main: |
   func (u *unfolderUserProcessing) beforeCall(ctx *unfoldCtx) {
     ctx.unfolder.pop() // temporarily remove unfolder from top of stack
   }
-  
+
   func (u *unfolderUserProcessing) afterCall(ctx *unfoldCtx, err error) error {
     if err != nil {
       return err
     }
 
     if u.startSz >= len(ctx.unfolder.stack) {
-      u.fn(ctx.ptr.pop(), ctx.value.pop().Interface())
-    } else {
-      // add myself again, so we can intercept future calls
-      ctx.unfolder.push(u) 
+      return u.finalize(ctx)
     }
+
+    ctx.unfolder.push(u)
     return nil
+  }
+
+  func (u *unfolderUserProcessing) finalize(ctx *unfoldCtx) error {
+    return u.fn(ctx.ptr.pop(), ctx.value.pop().Interface())
   }
 
   func (u *unfolderUserProcessing) OnNil(ctx *unfoldCtx) error {
@@ -142,7 +145,7 @@ main: |
     err := ctx.OnKey(v)
     return u.afterCall(ctx, err)
   }
-  
+
   func (u *unfolderUserProcessing) OnKeyRef(ctx *unfoldCtx, v []byte) error {
     u.beforeCall(ctx)
     err := ctx.OnKeyRef(v)
@@ -155,13 +158,13 @@ templates.makeCallStructured: |
   {{ $kind := .kind | capitalize }}
   func (u *unfolderUserProcessing) On{{ $kind }}Start(ctx *unfoldCtx, v int, bt structform.BaseType) error {
     u.beforeCall(ctx)
-    err := ctx.On{{ $kind }}Start(v, bt)
+    err := ctx.unfolder.current.On{{ $kind }}Start(ctx, v, bt)
     return u.afterCall(ctx, err)
   }
 
   func (u *unfolderUserProcessing) On{{ $kind }}Finished(ctx *unfoldCtx) error {
     u.beforeCall(ctx)
-    err := ctx.On{{ $kind }}Finished()
+    err := ctx.unfolder.current.On{{ $kind }}Finished(ctx)
     return u.afterCall(ctx, err)
   }
 

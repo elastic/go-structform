@@ -41,7 +41,7 @@ type unfolderUserProcessing struct {
 
 type userProcessingInitFn func(unsafe.Pointer) (interface{}, userProcessingFn)
 
-type userProcessingFn func(unsafe.Pointer, interface{})
+type userProcessingFn func(unsafe.Pointer, interface{}) error
 
 func (u *unfolderUserProcessingInit) initState(ctx *unfoldCtx, ptr unsafe.Pointer) {
 	cell, cont := u.fnInit(ptr)
@@ -104,12 +104,15 @@ func (u *unfolderUserProcessing) afterCall(ctx *unfoldCtx, err error) error {
 	}
 
 	if u.startSz >= len(ctx.unfolder.stack) {
-		u.fn(ctx.ptr.pop(), ctx.value.pop().Interface())
-	} else {
-		// add myself again, so we can intercept future calls
-		ctx.unfolder.push(u)
+		return u.finalize(ctx)
 	}
+
+	ctx.unfolder.push(u)
 	return nil
+}
+
+func (u *unfolderUserProcessing) finalize(ctx *unfoldCtx) error {
+	return u.fn(ctx.ptr.pop(), ctx.value.pop().Interface())
 }
 
 func (u *unfolderUserProcessing) OnNil(ctx *unfoldCtx) error {
@@ -216,13 +219,13 @@ func (u *unfolderUserProcessing) OnByte(ctx *unfoldCtx, v byte) error {
 
 func (u *unfolderUserProcessing) OnArrayStart(ctx *unfoldCtx, v int, bt structform.BaseType) error {
 	u.beforeCall(ctx)
-	err := ctx.OnArrayStart(v, bt)
+	err := ctx.unfolder.current.OnArrayStart(ctx, v, bt)
 	return u.afterCall(ctx, err)
 }
 
 func (u *unfolderUserProcessing) OnArrayFinished(ctx *unfoldCtx) error {
 	u.beforeCall(ctx)
-	err := ctx.OnArrayFinished()
+	err := ctx.unfolder.current.OnArrayFinished(ctx)
 	return u.afterCall(ctx, err)
 }
 
@@ -234,13 +237,13 @@ func (u *unfolderUserProcessing) OnChildArrayDone(ctx *unfoldCtx) error {
 
 func (u *unfolderUserProcessing) OnObjectStart(ctx *unfoldCtx, v int, bt structform.BaseType) error {
 	u.beforeCall(ctx)
-	err := ctx.OnObjectStart(v, bt)
+	err := ctx.unfolder.current.OnObjectStart(ctx, v, bt)
 	return u.afterCall(ctx, err)
 }
 
 func (u *unfolderUserProcessing) OnObjectFinished(ctx *unfoldCtx) error {
 	u.beforeCall(ctx)
-	err := ctx.OnObjectFinished()
+	err := ctx.unfolder.current.OnObjectFinished(ctx)
 	return u.afterCall(ctx, err)
 }
 
