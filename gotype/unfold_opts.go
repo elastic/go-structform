@@ -36,7 +36,7 @@ func applyUnfoldOpts(opts []UnfoldOption) (i initUnfoldOptions, err error) {
 	return i, err
 }
 
-// Unfolders accepts a list of primitive or processing unfolders.
+// Unfolders accepts a list of primitive, processing, or stateful unfolders.
 //
 // Primitive unfolder must implement a function matching the type: func(to *Target, from P) error
 // Where to is an arbitrary go type that the result should be written to and
@@ -52,6 +52,12 @@ func applyUnfoldOpts(opts []UnfoldOption) (i initUnfoldOptions, err error) {
 // The process function is executed if the parsing step did succeed.
 // The address to the target structure and the original cell are reported to the process function,
 // reducing the need for allocation storage on the heap in most simple cases.
+//
+// Stateful unfolders have the function signature: func(to *T) UnfoldState.
+// The state returned by the initialization function is used for parsing.
+// Although stateful unfolders allow for the most complex unfolding possible,
+// they add the most overhead in managing state and allocations. If possible
+// prefer primitive unfolders, followed by processing unfolder.
 func Unfolders(in ...interface{}) UnfoldOption {
 	unfolders, err := makeUserUnfolderFns(in)
 	if err != nil || len(unfolders) == 0 {
