@@ -6,6 +6,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 - Regenerate code with new stringer. (PR #9)
+- Add support for custom unfolders when generating gotype.Unfolder. (PR #14, PR #15)
 
 ### Changed
 
