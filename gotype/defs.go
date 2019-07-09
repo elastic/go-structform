@@ -50,6 +50,7 @@ var (
 
 	tExtVisitor  = reflect.TypeOf((*structform.ExtVisitor)(nil)).Elem()
 	tFolder      = reflect.TypeOf((*Folder)(nil)).Elem()
+	tExpander    = reflect.TypeOf((*Expander)(nil)).Elem()
 	tUnfoldState = reflect.TypeOf((*UnfoldState)(nil)).Elem()
 )
 

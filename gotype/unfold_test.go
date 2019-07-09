@@ -40,6 +40,18 @@ type stateStringUnfolder struct {
 	fn func(string) error
 }
 
+type intFromString int
+
+func (i *intFromString) Expand() UnfoldState {
+	return &stateStringUnfolder{
+		fn: func(str string) error {
+			tmp, err := strconv.Atoi(str)
+			*i = intFromString(tmp)
+			return err
+		},
+	}
+}
+
 func (u *stateStringUnfolder) OnString(ctx UnfoldCtx, in string) error {
 	defer ctx.Done()
 	return u.fn(in)
@@ -488,6 +500,10 @@ func TestUserUnfold(t *testing.T) {
 			want:     myint(3),
 			unfolder: makeUnfoldStructAdd(),
 		},
+		"expander value": {
+			input: "42",
+			want:  intFromString(42),
+		},
 		"parse with UnfoldState": {
 			input:    "1234",
 			want:     myint(1234),
@@ -518,6 +534,10 @@ func TestUserUnfold(t *testing.T) {
 			want:     []myint{1, 2, 3},
 			unfolder: unfoldWithState,
 		},
+		"array of expanders": {
+			input: []string{"1", "2", "3"},
+			want:  []intFromString{1, 2, 3},
+		},
 		"parse map values from strings": {
 			input:    map[string]string{"a": "1", "b": "2", "c": "3"},
 			want:     map[string]myint{"a": 1, "b": 2, "c": 3},
@@ -543,6 +563,10 @@ func TestUserUnfold(t *testing.T) {
 			want:     map[string]myint{"a": 1, "b": 2, "c": 3},
 			unfolder: unfoldWithState,
 		},
+		"map of expanders": {
+			input: map[string]string{"a": "1", "b": "2", "c": "3"},
+			want:  map[string]intFromString{"a": 1, "b": 2, "c": 3},
+		},
 		"struct field from string": {
 			input:    map[string]string{"a": "1"},
 			want:     struct{ A myint }{1},
@@ -567,6 +591,10 @@ func TestUserUnfold(t *testing.T) {
 			input:    map[string]string{"a": "1"},
 			want:     struct{ A myint }{1},
 			unfolder: unfoldWithState,
+		},
+		"struct with expander": {
+			input: map[string]string{"a": "1"},
+			want:  struct{ A intFromString }{1},
 		},
 	}
 

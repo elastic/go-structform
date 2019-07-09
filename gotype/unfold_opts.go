@@ -80,6 +80,10 @@ func makeUserUnfolderFns(in []interface{}) (map[reflect.Type]reflUnfolder, error
 	M := map[reflect.Type]reflUnfolder{}
 
 	for _, cur := range in {
+		if cur == nil {
+			continue
+		}
+
 		t, unfolder, err := makeUserUnfolder(reflect.ValueOf(cur))
 		if err != nil {
 			return nil, err

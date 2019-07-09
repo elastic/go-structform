@@ -128,6 +128,8 @@ func makeFieldUnfolder(ctx *unfoldCtx, st reflect.StructField) (fieldUnfolder, e
 
 	if uu := lookupReflUser(ctx, targetType); uu != nil {
 		fu.initState = wrapReflUnfolder(st.Type, uu)
+	} else if targetType.Implements(tExpander) {
+		fu.initState = wrapReflUnfolder(st.Type, newExpanderInit())
 	} else if pu := lookupGoPtrUnfolder(st.Type); pu != nil {
 		fu.initState = pu.initState
 	} else {
