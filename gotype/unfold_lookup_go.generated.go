@@ -347,6 +347,10 @@ func lookupReflUnfolder(ctx *unfoldCtx, t reflect.Type, withUser bool) (reflUnfo
 		}
 	}
 
+	if t.Implements(tExpander) {
+		return newExpanderInit(), nil
+	}
+
 	if f := ctx.reg.find(t); f != nil {
 		return f, nil
 	}
@@ -434,6 +438,10 @@ func buildReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
 			return newUnfolderReflSlice(unfolderElem), nil
 		}
 
+		if reflect.PtrTo(et).Implements(tExpander) {
+			return newUnfolderReflSlice(newExpanderInit()), nil
+		}
+
 		switch et.Kind() {
 		case reflect.Interface:
 			return unfolderReflArrIfc, nil
@@ -493,6 +501,10 @@ func buildReflUnfolder(ctx *unfoldCtx, t reflect.Type) (reflUnfolder, error) {
 
 		if unfolderElem := lookupReflUser(ctx, et); unfolderElem != nil {
 			return newUnfolderReflMap(unfolderElem), nil
+		}
+
+		if reflect.PtrTo(et).Implements(tExpander) {
+			return newUnfolderReflMap(newExpanderInit()), nil
 		}
 
 		switch et.Kind() {

@@ -27,6 +27,12 @@ import (
 	stunsafe "github.com/elastic/go-structform/internal/unsafe"
 )
 
+// Expander supports the creation of an UnfoldState for handling the unfolding
+// into the current value.
+type Expander interface {
+	Expand() UnfoldState
+}
+
 // UnfoldCtx provides access to the shared unfolding stack. It is used with
 // UnfoldState, so to implement very custom parsing.
 type UnfoldCtx interface {
@@ -83,6 +89,8 @@ type unfoldUserStateInit struct {
 }
 
 type unfoldStateInitFn func(unsafe.Pointer) UnfoldState
+
+type unfoldExpanderInit struct{}
 
 func makeUserUnfolder(fn reflect.Value) (target reflect.Type, unfolder reflUnfolder, err error) {
 	t := fn.Type()
@@ -225,6 +233,17 @@ func checkUserStateUnfolder(fn reflect.Value) error {
 	}
 
 	return nil
+}
+
+var _unfoldExpanderInit = &unfoldExpanderInit{}
+
+func newExpanderInit() reflUnfolder {
+	return _unfoldExpanderInit
+}
+
+func (*unfoldExpanderInit) initState(ctx *unfoldCtx, val reflect.Value) {
+	st := val.Interface().(Expander).Expand()
+	ctx.Push(st)
 }
 
 func (ctx *unfoldCtx) Done() {
