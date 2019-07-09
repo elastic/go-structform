@@ -35,6 +35,16 @@ type unfoldCase struct {
 	value interface{}
 }
 
+type stateStringUnfolder struct {
+	BaseUnfoldState
+	fn func(string) error
+}
+
+func (u *stateStringUnfolder) OnString(ctx UnfoldCtx, in string) error {
+	defer ctx.Done()
+	return u.fn(in)
+}
+
 func TestFoldUnfoldConsistent(t *testing.T) {
 	for name, test := range unfoldSamples() {
 		test := test
@@ -438,6 +448,16 @@ func TestUserUnfold(t *testing.T) {
 		})
 	}
 
+	unfoldWithState := func(to *myint) UnfoldState {
+		return &stateStringUnfolder{
+			fn: func(in string) error {
+				i, err := strconv.Atoi(in)
+				*to = myint(i)
+				return err
+			},
+		}
+	}
+
 	tests := map[string]struct {
 		input    interface{}
 		want     interface{}
@@ -468,6 +488,11 @@ func TestUserUnfold(t *testing.T) {
 			want:     myint(3),
 			unfolder: makeUnfoldStructAdd(),
 		},
+		"parse with UnfoldState": {
+			input:    "1234",
+			want:     myint(1234),
+			unfolder: unfoldWithState,
+		},
 		"parse array values from strings": {
 			input:    []string{"1", "2", "3"},
 			want:     []myint{1, 2, 3},
@@ -487,6 +512,11 @@ func TestUserUnfold(t *testing.T) {
 			input:    []addInt{{1, 2}, {20, 3}},
 			want:     []myint{3, 23},
 			unfolder: makeUnfoldStructAdd(),
+		},
+		"array with UnfoldState": {
+			input:    []string{"1", "2", "3"},
+			want:     []myint{1, 2, 3},
+			unfolder: unfoldWithState,
 		},
 		"parse map values from strings": {
 			input:    map[string]string{"a": "1", "b": "2", "c": "3"},
@@ -508,6 +538,11 @@ func TestUserUnfold(t *testing.T) {
 			want:     map[string]myint{"a": 3, "b": 23},
 			unfolder: makeUnfoldStructAdd(),
 		},
+		"map with UnfoldState": {
+			input:    map[string]string{"a": "1", "b": "2", "c": "3"},
+			want:     map[string]myint{"a": 1, "b": 2, "c": 3},
+			unfolder: unfoldWithState,
+		},
 		"struct field from string": {
 			input:    map[string]string{"a": "1"},
 			want:     struct{ A myint }{1},
@@ -527,6 +562,11 @@ func TestUserUnfold(t *testing.T) {
 			input:    map[string]addInt{"a": {1, 2}},
 			want:     struct{ A myint }{3},
 			unfolder: makeUnfoldStructAdd(),
+		},
+		"struct with UnfoldState": {
+			input:    map[string]string{"a": "1"},
+			want:     struct{ A myint }{1},
+			unfolder: unfoldWithState,
 		},
 	}
 

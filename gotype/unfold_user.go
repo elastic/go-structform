@@ -21,9 +21,68 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"unsafe"
 
+	structform "github.com/elastic/go-structform"
 	stunsafe "github.com/elastic/go-structform/internal/unsafe"
 )
+
+// UnfoldCtx provides access to the shared unfolding stack. It is used with
+// UnfoldState, so to implement very custom parsing.
+type UnfoldCtx interface {
+	// Done signals the context that the current state is finished.
+	// The current state will be removed from the stack and processing continues
+	// with the current state.
+	Done()
+
+	// Cont replaces the current state with the new state. All unfolding
+	// will continue with the new state
+	Cont(st UnfoldState)
+
+	// Push adds a new parsing state on top of the state stack. Unfolding
+	// will continue with the new state.
+	Push(st UnfoldState)
+}
+
+// UnfoldState defines a custom user defined unfolder.
+// When unfolding a stack is used to keep state. The UnfoldCtx provides
+// methods to manipluate the stack of active unfolders.
+// The current UnfoldState will be used as long as it has not been remove or replaced
+// using one of the UnfoldCtx control methods.
+type UnfoldState interface {
+	// primitives
+	OnNil(ctx UnfoldCtx) error
+	OnBool(ctx UnfoldCtx, b bool) error
+	OnString(ctx UnfoldCtx, str string) error
+	OnInt(ctx UnfoldCtx, i int64) error
+	OnUint(ctx UnfoldCtx, u uint64) error
+	OnFloat(ctx UnfoldCtx, f float64) error
+
+	// array types
+	OnArrayStart(ctx UnfoldCtx, length int, bt structform.BaseType) error
+	OnArrayFinished(ctx UnfoldCtx) error
+
+	// object types
+	OnObjectStart(ctx UnfoldCtx, length int, bt structform.BaseType) error
+	OnObjectFinished(ctx UnfoldCtx) error
+	OnKey(ctx UnfoldCtx, key string) error
+}
+
+// BaseUnfoldState implements UnfoldState, but returns an error for every
+// callback possible.
+// One case embedd BaseUnfoldState in a custom struct, so to reduce the number
+// of methods to implement.
+type BaseUnfoldState struct{}
+
+type stateUnfolder struct {
+	unfolder UnfoldState
+}
+
+type unfoldUserStateInit struct {
+	fn unfoldStateInitFn
+}
+
+type unfoldStateInitFn func(unsafe.Pointer) UnfoldState
 
 func makeUserUnfolder(fn reflect.Value) (target reflect.Type, unfolder reflUnfolder, err error) {
 	t := fn.Type()
@@ -35,6 +94,8 @@ func makeUserUnfolder(fn reflect.Value) (target reflect.Type, unfolder reflUnfol
 	switch {
 	case t.NumIn() == 2 && t.NumOut() == 1:
 		unfolder, err = makeUserPrimitiveUnfolder(fn)
+	case t.NumIn() == 1 && t.NumOut() == 1:
+		unfolder, err = makeUserStateUnfolder(fn)
 	case t.NumIn() == 1 && t.NumOut() == 2:
 		unfolder, err = makeUserProcessingUnfolder(fn)
 	default:
@@ -131,3 +192,119 @@ func checkProcessingUnfolder(fn reflect.Value) error {
 
 	return nil
 }
+
+func makeUserStateUnfolder(fn reflect.Value) (reflUnfolder, error) {
+	if err := checkUserStateUnfolder(fn); err != nil {
+		return nil, err
+	}
+
+	return liftGoUnfolder(&unfoldUserStateInit{
+		fn: *((*unfoldStateInitFn)(stunsafe.UnsafeFnPtr(fn))),
+	}), nil
+
+}
+
+func checkUserStateUnfolder(fn reflect.Value) error {
+	if fn.Kind() != reflect.Func {
+		return fmt.Errorf("state unfolder '%v' is no function", fn)
+	}
+
+	t := fn.Type()
+
+	// check input
+	if t.NumIn() != 1 {
+		return fmt.Errorf("state unfolder '%v' must accept one target argument", fn)
+	}
+	in := t.In(0)
+	if in.Kind() != reflect.Ptr {
+		return fmt.Errorf("state unfolder '%v' target argument must be a pointer", fn)
+	}
+
+	if t.NumOut() != 1 || (t.NumOut() > 0 && t.Out(0) != tUnfoldState) {
+		return fmt.Errorf("function '%v' does not return UnfoldState type", fn)
+	}
+
+	return nil
+}
+
+func (ctx *unfoldCtx) Done() {
+	ctx.unfolder.pop()
+}
+
+func (ctx *unfoldCtx) Cont(st UnfoldState) {
+	ctx.unfolder.pop()
+	ctx.unfolder.push(&stateUnfolder{st})
+}
+
+func (ctx *unfoldCtx) Push(st UnfoldState) {
+	ctx.unfolder.push(&stateUnfolder{st})
+}
+
+func (u *unfoldUserStateInit) initState(ctx *unfoldCtx, ptr unsafe.Pointer) {
+	st := u.fn(ptr)
+	ctx.Push(st)
+}
+
+func (u *stateUnfolder) OnNil(ctx *unfoldCtx) error              { return u.unfolder.OnNil(ctx) }
+func (u *stateUnfolder) OnBool(ctx *unfoldCtx, v bool) error     { return u.unfolder.OnBool(ctx, v) }
+func (u *stateUnfolder) OnString(ctx *unfoldCtx, v string) error { return u.unfolder.OnString(ctx, v) }
+func (u *stateUnfolder) OnStringRef(ctx *unfoldCtx, v []byte) error {
+	return u.unfolder.OnString(ctx, string(v))
+}
+func (u *stateUnfolder) OnInt8(ctx *unfoldCtx, v int8) error   { return u.unfolder.OnInt(ctx, int64(v)) }
+func (u *stateUnfolder) OnInt16(ctx *unfoldCtx, v int16) error { return u.unfolder.OnInt(ctx, int64(v)) }
+func (u *stateUnfolder) OnInt32(ctx *unfoldCtx, v int32) error { return u.unfolder.OnInt(ctx, int64(v)) }
+func (u *stateUnfolder) OnInt64(ctx *unfoldCtx, v int64) error { return u.unfolder.OnInt(ctx, int64(v)) }
+func (u *stateUnfolder) OnInt(ctx *unfoldCtx, v int) error     { return u.unfolder.OnUint(ctx, uint64(v)) }
+func (u *stateUnfolder) OnByte(ctx *unfoldCtx, v byte) error   { return u.unfolder.OnUint(ctx, uint64(v)) }
+func (u *stateUnfolder) OnUint8(ctx *unfoldCtx, v uint8) error {
+	return u.unfolder.OnUint(ctx, uint64(v))
+}
+func (u *stateUnfolder) OnUint16(ctx *unfoldCtx, v uint16) error {
+	return u.unfolder.OnUint(ctx, uint64(v))
+}
+func (u *stateUnfolder) OnUint32(ctx *unfoldCtx, v uint32) error {
+	return u.unfolder.OnUint(ctx, uint64(v))
+}
+func (u *stateUnfolder) OnUint64(ctx *unfoldCtx, v uint64) error {
+	return u.unfolder.OnUint(ctx, uint64(v))
+}
+func (u *stateUnfolder) OnUint(ctx *unfoldCtx, v uint) error { return u.unfolder.OnUint(ctx, uint64(v)) }
+func (u *stateUnfolder) OnFloat32(ctx *unfoldCtx, v float32) error {
+	return u.unfolder.OnFloat(ctx, float64(v))
+}
+func (u *stateUnfolder) OnFloat64(ctx *unfoldCtx, v float64) error {
+	return u.unfolder.OnFloat(ctx, float64(v))
+}
+func (u *stateUnfolder) OnArrayStart(ctx *unfoldCtx, N int, bt structform.BaseType) error {
+	return u.unfolder.OnArrayStart(ctx, N, bt)
+}
+func (u *stateUnfolder) OnArrayFinished(ctx *unfoldCtx) error  { return u.unfolder.OnArrayFinished(ctx) }
+func (u *stateUnfolder) OnChildArrayDone(ctx *unfoldCtx) error { return nil }
+func (u *stateUnfolder) OnObjectStart(ctx *unfoldCtx, N int, bt structform.BaseType) error {
+	return u.unfolder.OnObjectStart(ctx, N, bt)
+}
+func (u *stateUnfolder) OnObjectFinished(ctx *unfoldCtx) error {
+	return u.unfolder.OnObjectFinished(ctx)
+}
+func (u *stateUnfolder) OnKey(ctx *unfoldCtx, v string) error { return u.unfolder.OnKey(ctx, v) }
+func (u *stateUnfolder) OnKeyRef(ctx *unfoldCtx, v []byte) error {
+	return u.unfolder.OnKey(ctx, string(v))
+}
+func (u *stateUnfolder) OnChildObjectDone(ctx *unfoldCtx) error { return nil }
+
+func (*BaseUnfoldState) OnNil(ctx UnfoldCtx) error                { return errUnexpectedNil }
+func (*BaseUnfoldState) OnBool(ctx UnfoldCtx, b bool) error       { return errUnexpectedBool }
+func (*BaseUnfoldState) OnString(ctx UnfoldCtx, str string) error { return errUnexpectedString }
+func (*BaseUnfoldState) OnInt(ctx UnfoldCtx, i int64) error       { return errUnexpectedNum }
+func (*BaseUnfoldState) OnUint(ctx UnfoldCtx, u uint64) error     { return errUnexpectedNum }
+func (*BaseUnfoldState) OnFloat(ctx UnfoldCtx, f float64) error   { return errUnexpectedNum }
+func (*BaseUnfoldState) OnArrayStart(ctx UnfoldCtx, length int, bt structform.BaseType) error {
+	return errUnexpectedArrayStart
+}
+func (*BaseUnfoldState) OnArrayFinished(ctx UnfoldCtx) error { return errUnexpectedArrayEnd }
+func (*BaseUnfoldState) OnObjectStart(ctx UnfoldCtx, length int, bt structform.BaseType) error {
+	return errUnexpectedObjectStart
+}
+func (*BaseUnfoldState) OnObjectFinished(ctx UnfoldCtx) error  { return errUnexpectedObjectEnd }
+func (*BaseUnfoldState) OnKey(ctx UnfoldCtx, key string) error { return errUnexpectedString }
