@@ -22,12 +22,13 @@ import (
 	stdjson "encoding/json"
 	"io"
 
-	// jsoniter "github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/ugorji/go/codec"
+
 	"github.com/elastic/go-structform/cborl"
 	"github.com/elastic/go-structform/gotype"
 	"github.com/elastic/go-structform/json"
 	"github.com/elastic/go-structform/ubjson"
-	"github.com/ugorji/go/codec"
 )
 
 type encoderFactory func(io.Writer) func(interface{}) error
@@ -54,23 +55,19 @@ func gocodecJSONDecoder(r io.Reader) func(interface{}) error {
 	return dec.Decode
 }
 
-/*
 func jsoniterDecoder(r io.Reader) func(interface{}) error {
-	iter := jsoniter.Parse(r, 4096)
+	dec := jsoniter.ConfigCompatibleWithStandardLibrary.NewDecoder(r)
 	return func(v interface{}) error {
-		iter.ReadVal(v)
-		return iter.Error
+		if !dec.More() {
+			return io.EOF
+		}
+		return dec.Decode(v)
 	}
 }
 
 func jsoniterBufDecoder(b []byte) func(interface{}) error {
-	iter := jsoniter.ParseBytes(b)
-	return func(v interface{}) error {
-		iter.ReadVal(v)
-		return iter.Error
-	}
+	return jsoniterDecoder(bytes.NewReader(b))
 }
-*/
 
 func structformJSONEncoder(w io.Writer) func(interface{}) error {
 	vs := json.NewVisitor(w)

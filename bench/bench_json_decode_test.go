@@ -24,9 +24,6 @@ import (
 	"testing"
 
 	stdjson "encoding/json"
-
-	"github.com/elastic/go-structform/json"
-	"github.com/elastic/go-structform/visitors"
 )
 
 func BenchmarkDecodeBeatsEvents(b *testing.B) {
@@ -34,28 +31,30 @@ func BenchmarkDecodeBeatsEvents(b *testing.B) {
 		return func(b *testing.B) {
 			jsonContent := readFile(paths...)
 
-			b.Run("structform-json-parse", func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
-					b.SetBytes(int64(len(jsonContent)))
-					dec := json.NewBytesDecoder(jsonContent, visitors.NilVisitor())
-					for {
-						err := dec.Next()
-						if err != nil {
-							if err != io.EOF {
-								b.Error(err)
+			/*
+				b.Run("structform-json-parse", func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						b.SetBytes(int64(len(jsonContent)))
+						dec := json.NewBytesDecoder(jsonContent, visitors.NilVisitor())
+						for {
+							err := dec.Next()
+							if err != nil {
+								if err != io.EOF {
+									b.Error(err)
+								}
+								break
 							}
-							break
 						}
 					}
-				}
-			})
+				})
+			*/
 
 			b.Run("std-json",
 				makeBenchmarkDecodeBeatsEvents(stdJSONBufDecoder, jsonContent))
 
 			// panic: fails to parse events
-			//b.Run("jsoniter",
-			//	makeBenchmarkDecodeBeatsEvents(jsoniterBufDecoder, jsonContent))
+			b.Run("jsoniter",
+				makeBenchmarkDecodeBeatsEvents(jsoniterBufDecoder, jsonContent))
 
 			b.Run("structform-json",
 				makeBenchmarkDecodeBeatsEvents(structformJSONBufDecoder(0), jsonContent))
@@ -122,7 +121,6 @@ func makeBenchmarkDecodeBeatsEvents(
 	factory decoderFactory,
 	content []byte,
 ) func(*testing.B) {
-
 	return func(b *testing.B) {
 		b.SetBytes(int64(len(content)))
 		for i := 0; i < b.N; i++ {
