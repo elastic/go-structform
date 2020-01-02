@@ -53,9 +53,8 @@ func BenchmarkDecodeBeatsEvents(b *testing.B) {
 			b.Run("std-json",
 				makeBenchmarkDecodeBeatsEvents(stdJSONBufDecoder, jsonContent))
 
-			// panic: fails to parse events
-			//b.Run("jsoniter",
-			//	makeBenchmarkDecodeBeatsEvents(jsoniterBufDecoder, jsonContent))
+			b.Run("jsoniter",
+				makeBenchmarkDecodeBeatsEvents(jsoniterBufDecoder, jsonContent))
 
 			b.Run("structform-json",
 				makeBenchmarkDecodeBeatsEvents(structformJSONBufDecoder(0), jsonContent))
@@ -122,7 +121,6 @@ func makeBenchmarkDecodeBeatsEvents(
 	factory decoderFactory,
 	content []byte,
 ) func(*testing.B) {
-
 	return func(b *testing.B) {
 		b.SetBytes(int64(len(content)))
 		for i := 0; i < b.N; i++ {
