@@ -14,6 +14,122 @@ A type implementing the `Visitor` interface, but forwards calls to another
 visitor is called a Transformer or Filter. Transformers/Filters can manipulate
 the data stream or create/collect errors if some wanted validation fails.
 
+## Examples
+
+Transcode a stream of JSON objects into a stream of CBOR:
+
+```
+func TranscodeJSON2CBOR(out io.Writer, in io.Reader) (int64, error) {
+	count, err := json.ParseReader(in, cborl.NewVisitor(out))
+	return count, err
+}
+```
+
+Parse a stream of JSON objects:
+
+```
+	var in io.Reader = ...
+	visitor, _ := gotype.NewUnfolder(nil)
+	dec := json.NewDecoder(in, 2048, visitor)
+	for {
+		var to interface{}
+		visitor.SetTarget(&to)
+		if err := dec.Next(); err != nil {
+			return err
+		}
+
+		// process `to`
+	}
+```
+
+Encode a channel of go `map[string]interface{}` to a stream of cbor objects:
+
+```
+	var out io.Writer = ...
+	var objects chan map[string]interface{} = ...
+
+	visitor := cborl.NewVisitor(out)
+	it, _ := gotype.NewIterator(visitor)
+	for _, obj := range objects {
+		if err := it.Fold(obj); err != nil {
+			return err
+		}
+	}
+
+	return nil
+```
+
+Convert between go types:
+
+```
+	var to map[string]int
+	visitor, _ := gotype.NewUnfolder(&to)
+	it, _ := gotype.NewIterator(visitor)
+
+	st := struct {
+		A int    `struct:"a"`
+		B string `struct:",omit"`
+	}{A: 1, B: "hello"}
+	if err := it.Fold(st); err != nil {
+		return err
+	}
+
+	// to == map[string]int{"a": 1}
+```
+
+Use custom folder and unfolder for existing go types:
+
+```
+type durationUnfolder struct {
+	gotype.BaseUnfoldState // Use BaseUnfoldState to create errors for methods not implemented
+	to                     *time.Duration
+}
+
+func foldDuration(in *time.Duration, v structform.ExtVisitor) error {
+	return v.OnString(in.String())
+}
+
+func unfoldDuration(to *time.Duration) gotype.UnfoldState {
+	return &durationUnfolder{to: to}
+}
+
+type durationUnfolder struct {
+	gotype.BaseUnfoldState // Use BaseUnfoldState to create errors for methods not implemented
+	to                     *time.Duration
+}
+
+func (u *durationUnfolder) OnString(_ gotype.UnfoldCtx, str string) error {
+	d, err := time.ParseDuration(str)
+	if err == nil {
+		*u.to = d
+	}
+	return err
+}
+
+
+...
+
+
+	visitor, _ := gotype.NewUnfolder(nil, gotype.Unfolders(
+		unfoldDuration,
+	))
+	it, _ := gotype.NewIterator(visitor, gotype.Folders(
+		foldDuration,
+	))
+
+	// store duration in temporary value
+	var tmp interface{}
+	visitor.SetTarget(&tmp)
+	it.Fold(5 * time.Minute)
+
+	// restore duration from temporary value
+	var dur time.Duration
+	visitor.SetTarget(&dur)
+	it.Fold(tmp)
+
+	// dur == 5 * time.Minute
+```
+
 ## Data Model
 
 The data model describes by which data types Serializers and Deserializers
