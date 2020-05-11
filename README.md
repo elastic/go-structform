@@ -16,12 +16,12 @@ the data stream or create/collect errors if some wanted validation fails.
 
 ## Examples
 
-Transcode a stream of JSON objects into a stream of CBOR:
+Transcode a stream of JSON objects into a stream of CBOR objects:
 
 ```
 func TranscodeJSON2CBOR(out io.Writer, in io.Reader) (int64, error) {
-	count, err := json.ParseReader(in, cborl.NewVisitor(out))
-	return count, err
+	bytesCount, err := json.ParseReader(in, cborl.NewVisitor(out))
+	return bytesCount, err
 }
 ```
 
