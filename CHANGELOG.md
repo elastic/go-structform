@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Fix potential use after free in string and []byte conversions. (PR #21)
+
 ## [0.0.6]
 
 ### Added
