@@ -53,9 +53,15 @@ pipeline {
                     retryWithSleep(retries: 2, seconds: 5, backoff: true) {
                       sh(label: 'get', script: 'go get -v -t ./...')
                     }
-                    sh(label: 'test', script: 'go test -v -race ./...')
+                    sh(label: 'test', script: '.ci/test.sh')
                   }
                 }
+              }
+            }
+            post {
+              always {
+                archiveArtifacts(artifacts: "${BASE_DIR}/build/**")
+                junit(allowEmptyResults: true, keepLongStdio: true, testResults: "${BASE_DIR}/build/*xml")
               }
             }
           }
