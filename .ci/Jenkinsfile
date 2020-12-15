@@ -9,6 +9,7 @@ pipeline {
     BASE_DIR = "src/github.com/elastic/${env.REPO}"
     JOB_GIT_CREDENTIALS = "f6c7695a-671e-4f4f-a331-acdce44ff9ba"
     PIPELINE_LOG_LEVEL = 'INFO'
+    GO111MODULE = "auto"
   }
   options {
     timeout(time: 1, unit: 'HOURS')
@@ -49,6 +50,9 @@ pipeline {
                 cleanup()
                 withGoEnv(version: "${GO_VERSION}"){
                   dir("${BASE_DIR}"){
+                    retryWithSleep(retries: 2, seconds: 5, backoff: true) {
+                      sh(label: 'get', script: 'go get -v -t ./...')
+                    }
                     sh(label: 'test', script: 'go test -v -race ./...')
                   }
                 }
