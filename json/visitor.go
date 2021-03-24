@@ -93,6 +93,9 @@ func (v *Visitor) SetEscapeHTML(b bool) {
 	}
 }
 
+// SetIgnoreInvalidFloat configures how the visitor handles undefined floating point values like NaN or Inf.
+// By default the visitor will error. This behavior is similar to setting SetIgnoreInvalidFloat(false).
+// If true is passed, then invalid floating point values will be replaces with the `null` symbol.
 func (v *Visitor) SetIgnoreInvalidFloat(b bool) {
 	v.ignoreInvalidFloat = b
 }
