@@ -5,7 +5,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Add optional support to JSON encoder to encode a NaN or Inf floating point value to  null. (PR #28)
 
 ### Changed
 
@@ -14,6 +13,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 ### Fixed
+
+## [0.0.8]
+
+### Added
+
+- Add optional support to JSON encoder to encode a NaN or Inf floating point value to  null. (PR #28)
 
 ## [0.0.7]
 
@@ -62,6 +67,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Fix invalid pointer indirections in struct to array/map.
 
 [Unreleased]: https://github.com/elastic/go-structform/compare/v0.0.7...HEAD
+[0.0.8]: https://github.com/elastic/go-structform/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/elastic/go-structform/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/elastic/go-structform/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/elastic/go-structform/compare/v0.0.4...v0.0.5
