@@ -20,9 +20,12 @@ package json
 import (
 	"bytes"
 	"io"
+	"math"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	structform "github.com/elastic/go-structform"
 	"github.com/elastic/go-structform/sftest"
@@ -126,6 +129,45 @@ func TestStringEncoding(t *testing.T) {
 
 			actual := buf.String()
 			assert.Equal(t, expected, actual)
+		})
+	}
+}
+
+func TestEncodeIgnoreSpecialFloatValues(t *testing.T) {
+	cases := map[string]struct {
+		tokens sftest.Recording
+		want   string
+	}{
+		"float64 NaN": {
+			tokens: sftest.Recording{
+				sftest.Float64Rec{math.NaN()},
+			},
+			want: `null`,
+		},
+		"float64 +Inf": {
+			tokens: sftest.Recording{
+				sftest.Float64Rec{math.Inf(1)},
+			},
+			want: `null`,
+		},
+		"float64 -Inf": {
+			tokens: sftest.Recording{
+				sftest.Float64Rec{math.Inf(-1)},
+			},
+			want: `null`,
+		},
+	}
+
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			var buf strings.Builder
+			visitor := NewVisitor(&buf)
+			visitor.SetIgnoreInvalidFloat(true)
+
+			err := test.tokens.Replay(visitor)
+			require.NoError(t, err)
+
+			require.Equal(t, test.want, buf.String())
 		})
 	}
 }
