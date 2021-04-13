@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Add optional support to JSON encoder to encode a NaN or Inf floating point value to  null. (PR #28)
 
 ### Changed
 
