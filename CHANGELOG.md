@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Added `Emptiable` interface to allow custom types to report that they are 'empty'. A structs field is not serialized if the `omitempty` struct tag is set and `IsEmpty()` returns false. #32
 
 ### Changed
 
@@ -13,6 +14,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 ### Fixed
+- Ensure `Fold` can be called when a value is given by value, but the `Folder` interface is implemented on the pointer type. #32
 
 ## [0.0.8]
 
