@@ -37,6 +37,32 @@ type foldCase struct {
 	value interface{}
 }
 
+type optInt struct {
+	set   bool
+	value int
+}
+
+func (i optInt) IsZero() bool { return !i.set }
+func (i optInt) Fold(v structform.ExtVisitor) error {
+	if i.set {
+		return v.OnInt(i.value)
+	}
+	return v.OnNil()
+}
+
+type optIntPtr struct {
+	set   bool
+	value int
+}
+
+func (i *optIntPtr) IsZero() bool { return i == nil || !i.set }
+func (i *optIntPtr) Fold(v structform.ExtVisitor) error {
+	if i != nil && i.set {
+		return v.OnInt(i.value)
+	}
+	return v.OnNil()
+}
+
 func TestIter2JsonConsistent(t *testing.T) {
 	for name, test := range foldSamples() {
 		test := test
@@ -343,6 +369,111 @@ func foldSamples() map[string]foldCase {
 				B *struct{ C int } `struct:",omitempty"`
 			}{A: 1},
 		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B optInt `struct:",omitempty"`
+			}{A: 1},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: optInt{}},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B *optInt `struct:",omitempty"`
+			}{A: 1},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: (*optInt)(nil)},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B *optInt `struct:",omitempty"`
+			}{A: 1, B: &optInt{}},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: optInt{}},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: &optInt{}},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B optIntPtr `struct:",omitempty"`
+			}{A: 1},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: optIntPtr{}},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B *optIntPtr `struct:",omitempty"`
+			}{A: 1},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: (*optIntPtr)(nil)},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B *optIntPtr `struct:",omitempty"`
+			}{A: 1, B: &optIntPtr{}},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: optIntPtr{}},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: &optIntPtr{}},
+		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B time.Time `struct:",omitempty"`
+			}{A: 1},
+		},
 
 		// omit empty with values
 		{
@@ -386,6 +517,62 @@ func foldSamples() map[string]foldCase {
 				A int
 				B *struct{ C int } `struct:",omitempty"`
 			}{A: 1, B: &struct{ C int }{2}},
+		},
+		{
+			`{"a": 1, "b": 2}`,
+			struct {
+				A int
+				B optInt `struct:",omitempty"`
+			}{A: 1, B: optInt{set: true, value: 2}},
+		},
+		{
+			`{"a": 1, "b": 2}`,
+			struct {
+				A int
+				B *optInt `struct:",omitempty"`
+			}{A: 1, B: &optInt{set: true, value: 2}},
+		},
+		{
+			`{"a": 1, "b": 2}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: optInt{set: true, value: 2}},
+		},
+		{
+			`{"a": 1, "b": 2}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: &optInt{set: true, value: 2}},
+		},
+		{
+			`{"a": 1, "b": 2}`,
+			struct {
+				A int
+				B optIntPtr `struct:",omitempty"`
+			}{A: 1, B: optIntPtr{set: true, value: 2}},
+		},
+		{
+			`{"a": 1, "b": 2}`,
+			struct {
+				A int
+				B *optIntPtr `struct:",omitempty"`
+			}{A: 1, B: &optIntPtr{set: true, value: 2}},
+		},
+		{
+			`{"a": 1, "b": 2}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: optIntPtr{set: true, value: 2}},
+		},
+		{
+			`{"a": 1, "b": 2}`,
+			struct {
+				A int
+				B interface{} `struct:",omitempty"`
+			}{A: 1, B: &optIntPtr{set: true, value: 2}},
 		},
 
 		// omit
