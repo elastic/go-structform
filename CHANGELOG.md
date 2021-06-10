@@ -5,7 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Added `Emptiable` interface to allow custom types to report that they are 'empty'. A structs field is not serialized if the `omitempty` struct tag is set and `IsEmpty()` returns false. #32
+- Added `IsZeroer` interface to allow custom types to report that they are not initialized. A structs field is not serialized if the `omitempty` struct tag is set and `IsZero()` returns true. #32
 
 ### Changed
 
