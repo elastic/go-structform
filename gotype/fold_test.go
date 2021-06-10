@@ -467,6 +467,13 @@ func foldSamples() map[string]foldCase {
 				B interface{} `struct:",omitempty"`
 			}{A: 1, B: &optIntPtr{}},
 		},
+		{
+			`{"a": 1}`,
+			struct {
+				A int
+				B time.Time `struct:",omitempty"`
+			}{A: 1},
+		},
 
 		// omit empty with values
 		{

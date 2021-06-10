@@ -343,19 +343,19 @@ func makeResolveNonEmptyValue(st reflect.Type) func(reflect.Value) (reflect.Valu
 		return v, v.Len() > 0
 	}
 
-	resolveEmptiable := func(v reflect.Value) (reflect.Value, bool) {
+	resolveIsZeroer := func(v reflect.Value) (reflect.Value, bool) {
 		empty := v.Interface().(IsZeroer).IsZero()
 		return v, !empty
 	}
 
-	resolveEmptiablePtr := func(v reflect.Value) (reflect.Value, bool) {
+	resolveIsZeroerPtr := func(v reflect.Value) (reflect.Value, bool) {
 		if v.CanAddr() {
-			return resolveEmptiable(v.Addr())
+			return resolveIsZeroer(v.Addr())
 		}
 
 		tmp := reflect.New(v.Type())
 		tmp.Elem().Set(v)
-		return resolveEmptiable(tmp)
+		return resolveIsZeroer(tmp)
 	}
 
 	resolveInterfaceLazy := func(v reflect.Value) (reflect.Value, bool) {
@@ -388,9 +388,9 @@ func makeResolveNonEmptyValue(st reflect.Type) func(reflect.Value) (reflect.Valu
 			resolvers = append(resolvers, resolveBySize)
 		default:
 			if implementsIsZeroer(st) {
-				resolvers = append(resolvers, resolveEmptiable)
+				resolvers = append(resolvers, resolveIsZeroer)
 			} else if implementsPtrIsZeroer(st) {
-				resolvers = append(resolvers, resolveEmptiablePtr)
+				resolvers = append(resolvers, resolveIsZeroerPtr)
 			}
 		}
 		break
