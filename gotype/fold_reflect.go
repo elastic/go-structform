@@ -344,7 +344,7 @@ func makeResolveNonEmptyValue(st reflect.Type) func(reflect.Value) (reflect.Valu
 	}
 
 	resolveEmptiable := func(v reflect.Value) (reflect.Value, bool) {
-		empty := v.Interface().(Emptiable).IsEmpty()
+		empty := v.Interface().(IsZeroer).IsZero()
 		return v, !empty
 	}
 
@@ -387,9 +387,9 @@ func makeResolveNonEmptyValue(st reflect.Type) func(reflect.Value) (reflect.Valu
 		case reflect.Map, reflect.String, reflect.Slice, reflect.Array:
 			resolvers = append(resolvers, resolveBySize)
 		default:
-			if implementsEmptiable(st) {
+			if implementsIsZeroer(st) {
 				resolvers = append(resolvers, resolveEmptiable)
-			} else if implementsPtrEmptiable(st) {
+			} else if implementsPtrIsZeroer(st) {
 				resolvers = append(resolvers, resolveEmptiablePtr)
 			}
 		}

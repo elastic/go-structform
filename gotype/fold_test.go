@@ -42,7 +42,7 @@ type optInt struct {
 	value int
 }
 
-func (i optInt) IsEmpty() bool { return !i.set }
+func (i optInt) IsZero() bool { return !i.set }
 func (i optInt) Fold(v structform.ExtVisitor) error {
 	if i.set {
 		return v.OnInt(i.value)
@@ -55,7 +55,7 @@ type optIntPtr struct {
 	value int
 }
 
-func (i *optIntPtr) IsEmpty() bool { return i == nil || !i.set }
+func (i *optIntPtr) IsZero() bool { return i == nil || !i.set }
 func (i *optIntPtr) Fold(v structform.ExtVisitor) error {
 	if i != nil && i.set {
 		return v.OnInt(i.value)

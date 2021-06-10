@@ -39,11 +39,11 @@ type Folder interface {
 	Fold(structform.ExtVisitor) error
 }
 
-// Emptiable interface allows custom types to be reported as empty.
+// IsZeroer interface allows custom types to be reported as empty.
 // If the `omitempty` struct tag option is set and the custom type implements
-// IsEmpty(), which returns true, then the field will not be reported.
-type Emptiable interface {
-	IsEmpty() bool
+// IsZero(), which returns true, then the field will not be reported.
+type IsZeroer interface {
+	IsZero() bool
 }
 
 type foldContext struct {
