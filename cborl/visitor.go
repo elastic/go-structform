@@ -27,9 +27,8 @@ import (
 
 type Visitor struct {
 	w       writer
+	length  lengthStack
 	scratch [16]byte
-
-	length lengthStack
 }
 
 type writer struct {

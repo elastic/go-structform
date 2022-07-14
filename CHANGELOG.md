@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Changed
+- Reorder elements in structs to reduce memory. (PR #37)
 
 ### Deprecated
 

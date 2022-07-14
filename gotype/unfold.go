@@ -29,23 +29,21 @@ type Unfolder struct {
 }
 
 type unfoldCtx struct {
-	opts options
-
-	// buf buffer
+	unfolder unfolderStack
+	ptr      ptrStack
 
 	userReg map[reflect.Type]reflUnfolder
 	reg     *typeUnfoldRegistry
 
-	unfolder unfolderStack
-	value    reflectValueStack
-	baseType structformTypeStack
-	ptr      ptrStack
-	key      keyStack
-	idx      idxStack
+	value reflectValueStack
+	key   keyStack
 
-	keyCache symbolCache
-
+	keyCache    symbolCache
+	opts        options
 	valueBuffer unfoldBuf
+
+	baseType structformTypeStack
+	idx      idxStack
 }
 
 type unfoldBuf struct {
