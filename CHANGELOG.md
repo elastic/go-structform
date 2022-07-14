@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Removed
 
 ### Fixed
+- Fix to break out of endless loop. (PR #36)
 
 ## [0.0.9]
 
