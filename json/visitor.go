@@ -43,7 +43,6 @@ type Visitor struct {
 
 type boolStack struct {
 	stack   []bool
-	stack0  [32]bool
 	current bool
 }
 
@@ -433,7 +432,7 @@ func (vs *Visitor) onFloat(f float64, bits int) error {
 }
 
 func (s *boolStack) init() {
-	s.stack = s.stack0[:0]
+	s.stack = make([]bool, 0, 32)
 }
 
 func (s *boolStack) push(b bool) {
