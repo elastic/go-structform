@@ -45,7 +45,8 @@ type Parser struct {
 	// preallocate stack memory for up to 32 nested arrays/objects
 	statesBuf [32]state
 
-	literalBuffer  []byte
+	literalBuffer []byte
+	// literalBuffer0 is used as a fast reset option for literalBuffer without allocation.
 	literalBuffer0 [64]byte
 
 	inEscape bool
