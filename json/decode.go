@@ -26,15 +26,14 @@ import (
 type Decoder struct {
 	p Parser
 
-	buffer  []byte
-	buffer0 []byte
-	in      io.Reader
+	buffer []byte
+	in     io.Reader
 }
 
 func NewDecoder(in io.Reader, buffer int, vs structform.Visitor) *Decoder {
 	dec := &Decoder{
-		buffer0: make([]byte, buffer),
-		in:      in,
+		buffer: make([]byte, 0, buffer),
+		in:     in,
 	}
 	dec.p.init(vs)
 	return dec
@@ -42,9 +41,8 @@ func NewDecoder(in io.Reader, buffer int, vs structform.Visitor) *Decoder {
 
 func NewBytesDecoder(b []byte, vs structform.Visitor) *Decoder {
 	dec := &Decoder{
-		buffer:  b,
-		buffer0: b[:0],
-		in:      nil,
+		buffer: b,
+		in:     nil,
 	}
 	dec.p.init(vs)
 	return dec
@@ -66,8 +64,8 @@ func (dec *Decoder) Next() error {
 				return io.EOF
 			}
 
-			n, err := dec.in.Read(dec.buffer0)
-			dec.buffer = dec.buffer0[:n]
+			n, err := dec.in.Read(dec.buffer)
+			dec.buffer = dec.buffer[:n]
 			if n == 0 && err != nil {
 				return err
 			}
