@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Changed
+- Remove duplicate fields to avoid unnecessary struct grows. (PR #38)
 - Reorder elements in structs to reduce memory. (PR #37)
 
 ### Deprecated
