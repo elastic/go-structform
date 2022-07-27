@@ -242,6 +242,10 @@ func (p *Parser) feedUntil(b []byte) (int, bool, error) {
 			return 0, false, errFailing
 		}
 
+		if err != nil {
+			break
+		}
+
 		reported = reported && len(p.states) == 0
 	}
 

@@ -8,12 +8,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 - Remove duplicate fields to avoid unnecessary struct grows. (PR #38)
+- Reorder elements in structs to reduce memory. (PR #37)
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+- Fix to break out of endless loop. (PR #36)
 
 ## [0.0.9]
 

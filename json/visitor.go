@@ -32,12 +32,13 @@ import (
 type Visitor struct {
 	w writer
 
-	scratch [64]byte
+	escapeSet []bool
 
 	first   boolStack
 	inArray boolStack
 
-	escapeSet          []bool
+	scratch [64]byte
+
 	ignoreInvalidFloat bool
 }
 

@@ -24,10 +24,9 @@ import (
 )
 
 type Decoder struct {
-	p Parser
-
-	buffer []byte
-	in     io.Reader
+	in      io.Reader
+	buffer  []byte
+	p       Parser
 }
 
 func NewDecoder(in io.Reader, buffer int, vs structform.Visitor) *Decoder {

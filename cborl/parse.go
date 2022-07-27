@@ -32,12 +32,12 @@ type Parser struct {
 	// last fail state
 	err error
 
+	buffer []byte
+
 	// parser state machine
 	state stateStack
 
-	length lengthStack
-
-	buffer  []byte
+	length  lengthStack
 	buffer0 [64]byte
 }
 

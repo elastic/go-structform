@@ -31,7 +31,8 @@ type Parser struct {
 	strVisitor structform.StringRefVisitor
 
 	// last fail state
-	err error
+	err    error
+	buffer []byte
 
 	// parser state machine
 	state      stateStack
@@ -39,7 +40,6 @@ type Parser struct {
 
 	length lengthStack
 
-	buffer  []byte
 	buffer0 [64]byte
 
 	// internal parser state
