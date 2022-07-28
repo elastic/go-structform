@@ -7,12 +7,18 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Changed
-- Remove duplicate fields to avoid unnecessary struct grows. (PR #38)
-- Reorder elements in structs to reduce memory. (PR #37)
 
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+## [0.0.10]
+
+### Changed
+- Remove duplicate fields to avoid unnecessary struct grows. (PR #38)
+- Reorder elements in structs to reduce memory. (PR #37)
 
 ### Fixed
 - Fix to break out of endless loop. (PR #36)
@@ -77,7 +83,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 - Fix invalid pointer indirections in struct to array/map.
 
-[Unreleased]: https://github.com/elastic/go-structform/compare/v0.0.9...HEAD
+[Unreleased]: https://github.com/elastic/go-structform/compare/v0.0.10...HEAD
+[0.0.10]: https://github.com/elastic/go-structform/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/elastic/go-structform/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/elastic/go-structform/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/elastic/go-structform/compare/v0.0.6...v0.0.7
