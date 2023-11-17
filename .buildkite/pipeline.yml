@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/buildkite/pipeline-schema/main/schema.json
+
+steps:
+  - group: "Test matrix. Linux"
+    steps:
+      - label: ":linux: Test matrix. Go {{matrix.go_version}}"
+        key: test-matrix-lin
+        matrix:
+          setup:
+            go_version:
+              - "1.15.6"
+              - "1.16.2"
+        command:
+          - ".buildkite/scripts/test.sh"
+        env:
+          SETUP_GOLANG_VERSION: "{{matrix.go_version}}"
+        agents:
+          image: golang:{{matrix.go_version}}
+          cpu: "8"
+          memory: "4G"
+        artifact_paths:
+          - "build/junit-*.xml"
+
+  - label: ":junit: Junit annotate"
+    plugins:
+      - junit-annotate#v2.4.1:
+          artifacts: "*.xml"
+          fail-build-on-error: true
+    agents:
+      provider: "gcp"
+    depends_on:
+      - step: "test-matrix-lin"
+        allow_failure: true
