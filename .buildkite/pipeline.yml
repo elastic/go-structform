@@ -13,7 +13,7 @@ steps:
         command:
           - ".buildkite/scripts/test.sh"
         env:
-          SETUP_GOLANG_VERSION: "{{matrix.go_version}}"
+          GO_VERSION: "{{matrix.go_version}}"
         agents:
           image: golang:{{matrix.go_version}}
           cpu: "8"
