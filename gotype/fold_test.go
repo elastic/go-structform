@@ -22,6 +22,7 @@ import (
 	gojson "encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -99,6 +100,18 @@ func TestUserFold(t *testing.T) {
 		return vs.OnInt64(t.Unix())
 	}
 
+	ip := net.IP([]byte{192, 168, 31, 1})
+	ipv6 := net.IP([]byte{
+		0x20, 0x01, 0x0d, 0xb8, // 2001:0db8
+		0x85, 0xa3, 0x00, 0x00, // 85a3:0000
+		0x00, 0x00, 0x8a, 0x2e, // 0000:8a2e
+		0x03, 0x70, 0x73, 0x34, // 0370:7334
+	})
+
+	foldIpString := func(t *net.IP, vs structform.ExtVisitor) error {
+		return vs.OnString(t.String())
+	}
+
 	tests := []struct {
 		in   interface{}
 		fold interface{}
@@ -143,6 +156,36 @@ func TestUserFold(t *testing.T) {
 			in:   map[string]interface{}{"ts": &ts},
 			fold: foldTsString,
 			want: sftest.Obj(1, structform.AnyType, "ts", sftest.StringRec{tsStr}),
+		},
+		{
+			in:   ip,
+			fold: foldIpString,
+			want: sftest.Recording{sftest.StringRec{ip.String()}},
+		},
+		{
+			in:   map[string]interface{}{"ip": ip},
+			fold: foldIpString,
+			want: sftest.Obj(1, structform.AnyType, "ip", sftest.StringRec{ip.String()}),
+		},
+		{
+			in:   []net.IP{ip},
+			fold: foldIpString,
+			want: sftest.Arr(1, structform.AnyType, sftest.StringRec{ip.String()}),
+		},
+		{
+			in:   ipv6,
+			fold: foldIpString,
+			want: sftest.Recording{sftest.StringRec{ipv6.String()}},
+		},
+		{
+			in:   map[string]interface{}{"ip": ipv6},
+			fold: foldIpString,
+			want: sftest.Obj(1, structform.AnyType, "ip", sftest.StringRec{ipv6.String()}),
+		},
+		{
+			in:   []net.IP{ipv6},
+			fold: foldIpString,
+			want: sftest.Arr(1, structform.AnyType, sftest.StringRec{ipv6.String()}),
 		},
 	}
 
