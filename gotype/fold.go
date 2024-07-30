@@ -72,6 +72,7 @@ func NewIterator(vs structform.Visitor, opts ...FoldOption) (*Iterator, error) {
 		userReg = map[reflect.Type]reFoldFn{}
 		for typ, folder := range O.foldFns {
 			reg.set(typ, folder)
+			userReg[typ] = folder
 		}
 	}
 
