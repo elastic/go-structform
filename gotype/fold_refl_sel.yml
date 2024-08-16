@@ -17,8 +17,12 @@
 
 import:
   - types.yml
+  - license.yml
 
 main: |
+
+  {{ data.license }}
+
   package gotype
 
   var _reflPrimitivesMapping = map[reflect.Type]reFoldFn{

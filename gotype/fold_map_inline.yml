@@ -17,14 +17,18 @@
 
 import:
   - types.yml
+  - license.yml
 
 main: |
+
+  {{ data.license }}
+
   package gotype
 
   import (
     "reflect"
 
-    stunsafe "github.com/urso/go-structform/internal/unsafe"
+    stunsafe "github.com/elastic/go-structform/internal/unsafe"
   )
 
   var _mapInlineMapping = map[reflect.Type]reFoldFn{

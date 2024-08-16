@@ -17,11 +17,15 @@
 
 import:
   - unfold_templates.yml
+  - license.yml
 
 main: |
+
+  {{ data.license }}
+
   package gotype
 
-  import "github.com/urso/go-structform"
+  import "github.com/elastic/go-structform"
 
   {{/* defined 'lifted' pointer map unfolders into reflection based unfolders */}}
   var (
