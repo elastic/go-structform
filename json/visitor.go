@@ -40,6 +40,7 @@ type Visitor struct {
 	scratch [64]byte
 
 	ignoreInvalidFloat bool
+	unambiguousFloat   bool
 }
 
 type boolStack struct {
@@ -98,6 +99,15 @@ func (v *Visitor) SetEscapeHTML(b bool) {
 // If true is passed, then invalid floating point values will be replaces with the `null` symbol.
 func (v *Visitor) SetIgnoreInvalidFloat(b bool) {
 	v.ignoreInvalidFloat = b
+}
+
+// SetUnambiguousFloat configures how the visitor encodes floating point values to a json float unambiguously.
+// By default, equiv to SetUnambiguousFloat(false), the visitor will encode with the smallest number of digits.
+// e.g. 1.0 to 1 instead of 1.0, 100000000 to 1e+8 instead of 1.0e+8.
+// If true is passed, floating point values will always contain a decimal point,
+// in either decimal form or scientific notation.
+func (v *Visitor) SetUnambiguousFloat(b bool) {
+	v.unambiguousFloat = b
 }
 
 func (vs *Visitor) writeByte(b byte) error {
@@ -428,8 +438,40 @@ func (vs *Visitor) onFloat(f float64, bits int) error {
 	}
 
 	b := strconv.AppendFloat(vs.scratch[:0], f, 'g', -1, bits)
-	err := vs.w.write(b)
-	return err
+
+	if vs.unambiguousFloat {
+		// b can be in either decimal form or scientific notation.
+		// For decimal form, append ".0" if decimal point '.' is not present in the encoded number.
+		// e.g. 1 becomes 1.0.
+		// For scientific notation, append ".0" to mantissa if decimal point '.' is not present in the encoded mantissa.
+		// e.g. 1e+2 becomes 1.0e+2.
+		needDp := true
+		expIdx := len(b)
+
+	loop:
+		for i, c := range b {
+			switch c {
+			case 'e': // exponent separator
+				expIdx = i
+				break loop
+			case '.': // decimal point
+				needDp = false
+				break loop
+			}
+		}
+
+		if err := vs.w.write(b[:expIdx]); err != nil {
+			return err
+		}
+		if needDp {
+			if err := vs.w.write([]byte(".0")); err != nil {
+				return err
+			}
+		}
+		return vs.w.write(b[expIdx:])
+	}
+
+	return vs.w.write(b)
 }
 
 func (s *boolStack) init() {
