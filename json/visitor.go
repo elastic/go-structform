@@ -40,6 +40,7 @@ type Visitor struct {
 	scratch [64]byte
 
 	ignoreInvalidFloat bool
+	explicitRadixPoint bool
 }
 
 type boolStack struct {
@@ -98,6 +99,16 @@ func (v *Visitor) SetEscapeHTML(b bool) {
 // If true is passed, then invalid floating point values will be replaces with the `null` symbol.
 func (v *Visitor) SetIgnoreInvalidFloat(b bool) {
 	v.ignoreInvalidFloat = b
+}
+
+// SetExplicitRadixPoint configures whether the visitor encodes floating point values with an explicit radix point.
+// By default, equiv to SetExplicitRadixPoint(false), the radix point will be skipped if it is not needed.
+// e.g. 1.0 to 1 instead of 1.0, 100000000 to 1e+8 instead of 1.0e+8.
+// If true is passed, the encoded number will always contain a radix point,
+// in either decimal form or scientific notation.
+// This may be useful to signal the type of the number to a json parser.
+func (v *Visitor) SetExplicitRadixPoint(b bool) {
+	v.explicitRadixPoint = b
 }
 
 func (vs *Visitor) writeByte(b byte) error {
@@ -428,8 +439,40 @@ func (vs *Visitor) onFloat(f float64, bits int) error {
 	}
 
 	b := strconv.AppendFloat(vs.scratch[:0], f, 'g', -1, bits)
-	err := vs.w.write(b)
-	return err
+
+	if vs.explicitRadixPoint {
+		// b can be in either decimal form or scientific notation.
+		// For decimal form, append ".0" if radix point '.' is not present in the encoded number.
+		// e.g. 1 becomes 1.0.
+		// For scientific notation, append ".0" to mantissa if radix point '.' is not present in the encoded mantissa.
+		// e.g. 1e+2 becomes 1.0e+2.
+		needDp := true
+		expIdx := len(b)
+
+	loop:
+		for i, c := range b {
+			switch c {
+			case 'e': // exponent separator
+				expIdx = i
+				break loop
+			case '.': // decimal point
+				needDp = false
+				break loop
+			}
+		}
+
+		if err := vs.w.write(b[:expIdx]); err != nil {
+			return err
+		}
+		if needDp {
+			if err := vs.w.write([]byte(".0")); err != nil {
+				return err
+			}
+		}
+		return vs.w.write(b[expIdx:])
+	}
+
+	return vs.w.write(b)
 }
 
 func (s *boolStack) init() {

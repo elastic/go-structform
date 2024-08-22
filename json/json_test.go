@@ -171,3 +171,48 @@ func TestEncodeIgnoreSpecialFloatValues(t *testing.T) {
 		})
 	}
 }
+
+func TestEncodeExplicitRadixPoint(t *testing.T) {
+	cases := map[string]struct {
+		tokens sftest.Recording
+		want   string
+	}{
+		"1e+10": {
+			tokens: sftest.Recording{
+				sftest.Float64Rec{1e+10},
+			},
+			want: `1.0e+10`,
+		},
+		"1.1e+10": {
+			tokens: sftest.Recording{
+				sftest.Float64Rec{1.1e+10},
+			},
+			want: `1.1e+10`,
+		},
+		"1": {
+			tokens: sftest.Recording{
+				sftest.Float64Rec{1},
+			},
+			want: `1.0`,
+		},
+		"1.1": {
+			tokens: sftest.Recording{
+				sftest.Float64Rec{1.1},
+			},
+			want: `1.1`,
+		},
+	}
+
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			var buf strings.Builder
+			visitor := NewVisitor(&buf)
+			visitor.SetExplicitRadixPoint(true)
+
+			err := test.tokens.Replay(visitor)
+			require.NoError(t, err)
+
+			require.Equal(t, test.want, buf.String())
+		})
+	}
+}
