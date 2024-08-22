@@ -40,7 +40,7 @@ type Visitor struct {
 	scratch [64]byte
 
 	ignoreInvalidFloat bool
-	unambiguousFloat   bool
+	explicitRadixPoint bool
 }
 
 type boolStack struct {
@@ -101,13 +101,14 @@ func (v *Visitor) SetIgnoreInvalidFloat(b bool) {
 	v.ignoreInvalidFloat = b
 }
 
-// SetUnambiguousFloat configures how the visitor encodes floating point values to a json float unambiguously.
-// By default, equiv to SetUnambiguousFloat(false), the visitor will encode with the smallest number of digits.
+// SetExplicitRadixPoint configures whether the visitor encodes floating point values with an explicit radix point.
+// By default, equiv to SetExplicitRadixPoint(false), the radix point will be skipped if it is not needed.
 // e.g. 1.0 to 1 instead of 1.0, 100000000 to 1e+8 instead of 1.0e+8.
-// If true is passed, floating point values will always contain a decimal point,
+// If true is passed, the encoded number will always contain a radix point,
 // in either decimal form or scientific notation.
-func (v *Visitor) SetUnambiguousFloat(b bool) {
-	v.unambiguousFloat = b
+// This may be useful to signal the type of the number to a json parser.
+func (v *Visitor) SetExplicitRadixPoint(b bool) {
+	v.explicitRadixPoint = b
 }
 
 func (vs *Visitor) writeByte(b byte) error {
@@ -439,11 +440,11 @@ func (vs *Visitor) onFloat(f float64, bits int) error {
 
 	b := strconv.AppendFloat(vs.scratch[:0], f, 'g', -1, bits)
 
-	if vs.unambiguousFloat {
+	if vs.explicitRadixPoint {
 		// b can be in either decimal form or scientific notation.
-		// For decimal form, append ".0" if decimal point '.' is not present in the encoded number.
+		// For decimal form, append ".0" if radix point '.' is not present in the encoded number.
 		// e.g. 1 becomes 1.0.
-		// For scientific notation, append ".0" to mantissa if decimal point '.' is not present in the encoded mantissa.
+		// For scientific notation, append ".0" to mantissa if radix point '.' is not present in the encoded mantissa.
 		// e.g. 1e+2 becomes 1.0e+2.
 		needDp := true
 		expIdx := len(b)

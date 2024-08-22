@@ -172,7 +172,7 @@ func TestEncodeIgnoreSpecialFloatValues(t *testing.T) {
 	}
 }
 
-func TestEncodeUnambiguousFloat(t *testing.T) {
+func TestEncodeExplicitRadixPoint(t *testing.T) {
 	cases := map[string]struct {
 		tokens sftest.Recording
 		want   string
@@ -207,7 +207,7 @@ func TestEncodeUnambiguousFloat(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var buf strings.Builder
 			visitor := NewVisitor(&buf)
-			visitor.SetUnambiguousFloat(true)
+			visitor.SetExplicitRadixPoint(true)
 
 			err := test.tokens.Replay(visitor)
 			require.NoError(t, err)
