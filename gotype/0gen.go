@@ -17,6 +17,8 @@
 
 package gotype
 
+// Code generation depends on github.com/urso/mktmpl.
+
 //go:generate mktmpl -f -o fold_map_inline.generated.go fold_map_inline.yml
 //go:generate mktmpl -f -o fold_refl_sel.generated.go fold_refl_sel.yml
 //go:generate mktmpl -f -o stacks.generated.go stacks.yml
