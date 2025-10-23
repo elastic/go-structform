@@ -1,7 +1,7 @@
 [![Build Status](https://beats-ci.elastic.co/job/Library/job/go-structform-mbp/job/master/badge/icon)](https://beats-ci.elastic.co/job/Library/job/go-structform-mbp/job/master/)
 # Go-Structform - Structured Formatters
 
-go-structform provides capabilities for serializing, desirializing, and
+go-structform provides capabilities for serializing, deserializing, and
 transcoding structured data efficiently and generically.
 
 The top-level package provides the common layer by which serializers and
