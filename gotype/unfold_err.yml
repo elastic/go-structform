@@ -17,6 +17,7 @@
 
 import:
   - unfold_templates.yml
+  - license.yml
 
 data.errorUnfolders:
   unfolderNoTarget: errNotInitialized
@@ -26,6 +27,9 @@ data.errorUnfolders:
   unfolderErrExpectKey: errExpectedObjectKey
 
 main: |
+
+  {{ data.license }}
+
   package gotype
 
   {{ range $name, $err := data.errorUnfolders }}

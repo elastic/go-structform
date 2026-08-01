@@ -17,8 +17,12 @@
 
 import:
   - unfold_templates.yml
+  - license.yml
 
 main: |
+
+  {{ data.license }}
+
   package gotype
 
   func (u *unfolderReflSlice) OnNil(ctx *unfoldCtx) error {

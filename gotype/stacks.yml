@@ -33,7 +33,13 @@ data.stacks:
   type: structform.BaseType
   init: structform.AnyType
 
+import:
+  - license.yml
+
 main: |
+
+  {{ data.license }}
+
   package gotype
 
   {{ range .stacks }}
