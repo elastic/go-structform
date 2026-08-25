@@ -17,8 +17,12 @@
 
 import:
   - unfold_templates.yml
+  - license.yml
 
 main: |
+
+  {{ data.license }}
+
   package gotype
 
   {{/* define pointer based user unfolder types */}}

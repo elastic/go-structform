@@ -15,7 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import:
+  - license.yml
+
 main: |
+
+  {{ data.license }}
+
   package gotype
 
   {{ invoke "makeIgnoreType" "type" "" }}
