@@ -618,18 +618,34 @@ func (p *Parser) stepLen(b []byte) []byte {
 
 func (p *Parser) stepNeg(in []byte) (b []byte, done bool, err error) {
 	b = in
+	// CBOR encodes -1-n with an unsigned n. Widen before complementing
+	// when n exceeds the signed range of its encoded width.
 	switch p.state.current.minor {
 	case len8b:
-		b, done, err = b[1:], true, p.visitor.OnInt8(int8(^b[0]))
+		v := b[0]
+		b, done = b[1:], true
+		if v <= math.MaxInt8 {
+			err = p.visitor.OnInt8(^int8(v))
+		} else {
+			err = p.visitor.OnInt16(^int16(v))
+		}
 	case len16b:
 		var v uint16
 		if b, done, v = p.getUint16(b); done {
-			err = p.visitor.OnInt16(int16(^v))
+			if v <= math.MaxInt16 {
+				err = p.visitor.OnInt16(^int16(v))
+			} else {
+				err = p.visitor.OnInt32(^int32(v))
+			}
 		}
 	case len32b:
 		var v uint32
 		if b, done, v = p.getUint32(b); done {
-			err = p.visitor.OnInt32(int32(^v))
+			if v <= math.MaxInt32 {
+				err = p.visitor.OnInt32(^int32(v))
+			} else {
+				err = p.visitor.OnInt64(^int64(v))
+			}
 		}
 	case len64b:
 		var v uint64

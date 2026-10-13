@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Fix CBOR negative integer decoding overflowing at 8-, 16-, and 32-bit encoded width boundaries.
+
 ## [0.0.10]
 
 ### Changed
