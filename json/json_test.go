@@ -216,3 +216,24 @@ func TestEncodeExplicitRadixPoint(t *testing.T) {
 		})
 	}
 }
+
+func TestParseEscapedMultibyteString(t *testing.T) {
+	// An escape sequence followed by a multi-byte rune used to make the parser
+	// copy the bytes that follow the rune instead of the rune itself, and panic
+	// when the rune sat at the end of the string content. Parsing then re-encoding
+	// the string must round-trip.
+	cases := map[string]string{
+		"escaped backslash then accented rune": `{"s":"C:\\Users\\José\\app.log"}`,
+		"escaped quote then rune":              `{"s":"x\"ü"}`,
+		"escaped quote then emoji":             `{"s":"a\"😀"}`,
+		"escaped backslash then trailing rune": `{"s":"\\é"}`,
+	}
+
+	for name, in := range cases {
+		t.Run(name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			require.NoError(t, Parse([]byte(in), NewVisitor(buf)))
+			assert.Equal(t, in, buf.String())
+		})
+	}
+}
