@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Fix JSON parser wrapping or rejecting integers outside the int64 range: they are now reported as uint64, or as float64 if they don't fit uint64 either.
+
 ## [0.0.10]
 
 ### Changed

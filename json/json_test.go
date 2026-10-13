@@ -216,3 +216,44 @@ func TestEncodeExplicitRadixPoint(t *testing.T) {
 		})
 	}
 }
+
+func TestParseIntegerRange(t *testing.T) {
+	cases := map[string]struct {
+		in   string
+		want sftest.Record
+	}{
+		"max int64":      {in: "9223372036854775807", want: sftest.Int64Rec{Value: math.MaxInt64}},
+		"min int64":      {in: "-9223372036854775808", want: sftest.Int64Rec{Value: math.MinInt64}},
+		"max int64 + 1":  {in: "9223372036854775808", want: sftest.Uint64Rec{Value: math.MaxInt64 + 1}},
+		"max uint64":     {in: "18446744073709551615", want: sftest.Uint64Rec{Value: math.MaxUint64}},
+		"max uint64 + 1": {in: "18446744073709551616", want: sftest.Float64Rec{Value: 18446744073709551616}},
+		"min int64 - 1":  {in: "-9223372036854775809", want: sftest.Float64Rec{Value: -9223372036854775809}},
+	}
+
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			var got sftest.Recording
+			err := Parse([]byte(test.in), &got)
+			assert.NoError(t, err)
+			assert.Equal(t, sftest.Recording{test.want}, got)
+		})
+	}
+}
+
+func TestParseInvalidInteger(t *testing.T) {
+	cases := map[string]string{
+		"infinity":              "-Inf",
+		"hexadecimal":           "-0x10p0",
+		"letter after overflow": "184467440737095516160x",
+		"out of float64 range":  "1" + strings.Repeat("0", 400),
+	}
+
+	for name, in := range cases {
+		t.Run(name, func(t *testing.T) {
+			var got sftest.Recording
+			err := Parse([]byte(in), &got)
+			assert.Error(t, err)
+			assert.Empty(t, got)
+		})
+	}
+}

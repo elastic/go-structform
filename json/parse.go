@@ -692,38 +692,48 @@ func (p *Parser) stepNumber(b []byte) ([]byte, bool, error) {
 }
 
 func (p *Parser) reportNumber(b []byte, isDouble bool) error {
-	// parse number
-	var err error
 	if isDouble {
-		var f float64
-		if f, err = strconv.ParseFloat(bytes2Str(b), 64); err == nil {
-			err = p.visitor.OnFloat64(f)
-		}
-	} else {
-		var i int64
-		if i, err = parseInt(b); err == nil {
-			err = p.visitor.OnInt64(i)
-		}
+		return p.reportFloat(b)
 	}
-
-	return err
+	return p.reportInt(b)
 }
 
-func parseInt(b []byte) (int64, error) {
-	neg := false
-	if b[0] == '+' {
-		b = b[1:]
-	} else if b[0] == '-' {
-		neg = true
-		b = b[1:]
+func (p *Parser) reportFloat(b []byte) error {
+	f, err := strconv.ParseFloat(bytes2Str(b), 64)
+	if err != nil {
+		return err
+	}
+	return p.visitor.OnFloat64(f)
+}
+
+// reportInt reports an integer as int64, or as uint64 if it is positive and
+// too large for int64. Integers outside both ranges are reported as float64,
+// like the parser already does for literals such as 1e20.
+func (p *Parser) reportInt(b []byte) error {
+	neg := b[0] == '-'
+	digits := b
+	if neg || b[0] == '+' {
+		digits = b[1:]
 	}
 
-	u, err := parseUint(b)
-	n := int64(u)
-	if neg {
-		n = -n
+	u, err := parseUint(digits)
+	if err != nil {
+		if !isDigits(digits) {
+			return err
+		}
+		return p.reportFloat(b) // too large for uint64
 	}
-	return n, err
+
+	switch {
+	case !neg && u <= math.MaxInt64:
+		return p.visitor.OnInt64(int64(u))
+	case !neg:
+		return p.visitor.OnUint64(u)
+	case u <= -math.MinInt64:
+		return p.visitor.OnInt64(-int64(u)) // -int64(1<<63) wraps to MinInt64
+	default:
+		return p.reportFloat(b) // below math.MinInt64
+	}
 }
 
 func parseUint(b []byte) (uint64, error) {
@@ -801,6 +811,15 @@ func (p *Parser) stepKind(b []byte, kind []byte, err error) ([]byte, bool, error
 
 func isDigit(c byte) bool {
 	return '0' <= c && c <= '9'
+}
+
+func isDigits(b []byte) bool {
+	for _, c := range b {
+		if !isDigit(c) {
+			return false
+		}
+	}
+	return true
 }
 
 func trimLeft(b []byte) []byte {
