@@ -47,16 +47,19 @@ func TestEncDecoderConsistent(t *testing.T) {
 }
 
 func TestEncParseBytesConsistent(t *testing.T) {
-	testEncParseConsistent(t, func(content []byte, to structform.Visitor) error {
-		p := NewParser(to)
-		for _, b := range content {
-			err := p.feed([]byte{b})
-			if err != nil {
-				return err
-			}
+	testEncParseConsistent(t, parseBytewise)
+}
+
+// parseBytewise feeds content to the parser one byte at a time.
+func parseBytewise(content []byte, to structform.Visitor) error {
+	p := NewParser(to)
+	for _, b := range content {
+		err := p.feed([]byte{b})
+		if err != nil {
+			return err
 		}
-		return p.finalize()
-	})
+	}
+	return p.finalize()
 }
 
 func testEncParseConsistent(
@@ -130,6 +133,42 @@ func TestStringEncoding(t *testing.T) {
 			actual := buf.String()
 			assert.Equal(t, expected, actual)
 		})
+	}
+}
+
+func TestParseUnquote(t *testing.T) {
+	cases := map[string]struct {
+		in   string
+		want string
+	}{
+		"multi-byte after escape": {
+			in:   `"C:\\Users\\José\\app.log"`,
+			want: `C:\Users\José\app.log`,
+		},
+		"multi-byte at end after escape": {
+			in:   `"a\"😀"`,
+			want: `a"😀`,
+		},
+		"invalid UTF-8 byte": {
+			in:   "\"a\xffbc\"",
+			want: "a\xffbc",
+		},
+	}
+
+	parsers := map[string]func([]byte, structform.Visitor) error{
+		"Parse":          Parse,
+		"byte at a time": parseBytewise,
+	}
+
+	for name, test := range cases {
+		for parserName, parse := range parsers {
+			t.Run(name+"/"+parserName, func(t *testing.T) {
+				var got sftest.Recording
+				err := parse([]byte(test.in), &got)
+				assert.NoError(t, err)
+				assert.Equal(t, sftest.Recording{sftest.StringRec{Value: test.want}}, got)
+			})
+		}
 	}
 }
 

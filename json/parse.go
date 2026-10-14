@@ -648,8 +648,8 @@ func (p *Parser) unquote(in []byte) ([]byte, bool, error) {
 
 		default:
 			_, sz := utf8.DecodeRune(in[i:])
-			i += sz
 			written += copy(out[written:], in[i:i+sz])
+			i += sz
 		}
 	}
 
