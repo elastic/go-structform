@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- Fix JSON parser wrapping or rejecting integers outside the int64 range: they are now reported as uint64, or as float64 if they don't fit uint64 either.
 - Fix JSON parser corrupting non-ASCII characters in strings that contain an escape sequence or invalid UTF-8, and panicking when such a character is near the end of the input.
 
 ## [0.0.10]
